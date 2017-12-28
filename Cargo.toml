@@ -1,0 +1,6 @@
+[package]
+name = "avrbasic"
+version = "0.1.0"
+authors = ["Ashe Connor <ashe@kivikakk.ee>"]
+
+[dependencies]
