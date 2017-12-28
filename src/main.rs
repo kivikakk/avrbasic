@@ -1,6 +1,6 @@
 #![feature(lang_items, unwind_attributes)]
 #![no_std]
-#![no_main]
+#![cfg_attr(target_arch = "avr", no_main)]
 
 pub mod parser;
 
@@ -12,6 +12,7 @@ unsafe { write_volatile(DDRB, 0xFF); }
 */
 
 #[no_mangle]
+#[cfg(target_arch = "avr")]
 pub extern "C" fn main() {}
 
 #[cfg(target_arch = "avr")]
