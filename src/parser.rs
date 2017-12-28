@@ -1,3 +1,5 @@
+use core::iter::Peekable;
+
 #[derive(Debug, PartialEq)]
 pub enum Statement<'i> {
     Let(&'i [u8], Expr<'i>),
@@ -35,11 +37,36 @@ pub enum Expr<'i> {
     BinOp(BinOp, &'i Expr<'i>, &'i Expr<'i>),
 }
 
-#[derive(PartialEq)]
-enum TokenType {
+#[derive(Debug, PartialEq, Clone)]
+pub enum TokenType {
     Number,
     Label,
     BinOp,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum ParseError<'i> {
+    Empty,
+    UnknownToken(&'i [u8]),
+    BadTokenType(TokenType),
+    Expected(&'static [u8]),
+    Other(&'static str),
+}
+
+impl<'i> From<&'static str> for ParseError<'i> {
+    fn from(s: &'static str) -> ParseError<'i> {
+        ParseError::Other(s)
+    }
+}
+
+impl TokenType {
+    fn expect<'i>(&self, r: TokenType) -> Result<(), ParseError<'i>> {
+        if *self != r {
+            Err(ParseError::BadTokenType((*self).clone()))
+        } else {
+            Ok(())
+        }
+    }
 }
 
 struct Splitter<'i> {
@@ -62,7 +89,7 @@ impl<'i> Iterator for Splitter<'i> {
         let itt = Self::tt(self.v[0]);
 
         let mut len = 0;
-        while len < self.v.len() && self.v[len] != b' ' && Self::tt(self.v[len]) != itt {
+        while len < self.v.len() && self.v[len] != b' ' && Self::tt(self.v[len]) == itt {
             len += 1;
         }
 
@@ -78,22 +105,57 @@ impl<'i> Splitter<'i> {
         match c {
             b'0'...b'9' => TokenType::Number,
             b'A'...b'Z' => TokenType::Label,
-            b'+' | b'-' | b'*' | b'/' | b'%' => TokenType::BinOp,
+            b'+' | b'-' | b'*' | b'/' | b'%' | b'=' => TokenType::BinOp,
             _ => panic!(),
+        }
+    }
+
+    fn psplitter(self) -> PSplitter<'i> {
+        PSplitter(self.peekable())
+    }
+}
+
+struct PSplitter<'i>(pub Peekable<Splitter<'i>>);
+
+impl<'i> PSplitter<'i> {
+    fn expect(&mut self, s: &'static [u8]) -> Result<(), ParseError<'i>> {
+        if !self.check(s)? {
+            Err(ParseError::Expected(s))
+        } else {
+            Ok(())
+        }
+    }
+
+    fn check(&mut self, s: &'static [u8]) -> Result<bool, ParseError<'i>> {
+        let &(t, _) = self.0.peek().ok_or(ParseError::Empty)?;
+        if t == s {
+            self.0.next();
+            Ok(true)
+        } else {
+            Ok(false)
         }
     }
 }
 
-pub fn parse<'i>(i: &'i [u8]) -> Result<Statement<'i>, &'static str> {
-    let mut s = Splitter { v: i };
-    let t = s.next().ok_or("no statement")?;
+pub fn parse<'i>(i: &'i [u8]) -> Result<Statement<'i>, ParseError> {
+    let mut s = Splitter { v: i }.psplitter();
 
-    if t == b"LET" {
-        let v = t.next().ok_or("missing LET variable")?;
-        match v {}
+    if s.check(b"LET")? {
+        let (v, tt) = s.0.next().ok_or("missing LET variable")?;
+        tt.expect(TokenType::Label)?;
+
+        s.expect(b"=")?;
+
+        let r = parse_expr(s)?;
+
+        Ok(Statement::Let(v, r))
+    } else {
+        Err(ParseError::UnknownToken(s.0.next().unwrap().0))
     }
+}
 
-    Err("reached end of parse")
+fn parse_expr<'i>(mut s: PSplitter<'i>) -> Result<Expr<'i>, ParseError> {
+    Err("blah".into())
 }
 
 #[cfg(test)]
