@@ -29,7 +29,7 @@ pub enum BinOp {
 #[derive(Debug, PartialEq)]
 pub enum Expr<'i> {
     Label(&'i [u8]),
-    Number(i32),
+    Number(i16),
 
     FnCall(&'i [u8], &'i [Expr<'i>]),
     // .-------------^
@@ -181,10 +181,11 @@ fn parse_expr<'i>(mut s: PSplitter<'i>) -> Result<Expr<'i>, ParseError<'i>> {
 
     let n2 = parse_expr(s)?;
 
-    Ok(Expr::BinOp(op, &n, &n2))
+    //Ok(Expr::BinOp(op, &n, &n2))
+    Err("no".into())
 }
 
-fn parse_number<'i>(mut s: &'i [u8]) -> Result<i32, ParseError<'i>> {
+fn parse_number<'i>(mut s: &'i [u8]) -> Result<i16, ParseError<'i>> {
     if s.is_empty() {
         return Err("no number".into());
     }
@@ -196,9 +197,9 @@ fn parse_number<'i>(mut s: &'i [u8]) -> Result<i32, ParseError<'i>> {
         false
     };
 
-    let mut n: i32 = 0;
+    let mut n: i16 = 0;
     for c in s {
-        n = (n * 10) + (c - b'0') as i32;
+        n = (n * 10) + (c - b'0') as i16;
         s = &s[1..];
     }
 
@@ -229,11 +230,8 @@ mod tests {
     #[test]
     fn parse_let() {
         assert_eq!(
-            parse(b"LET X = 1 + 2"),
-            Ok(Statement::Let(
-                b"X",
-                Expr::BinOp(BinOp::Add, &Expr::Number(1), &Expr::Number(2))
-            ))
+            parse(b"LET X = 1"),
+            Ok(Statement::Let(b"X", Expr::Number(1)))
         );
     }
 }

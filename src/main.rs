@@ -1,19 +1,24 @@
 #![feature(lang_items, unwind_attributes)]
+#![feature(const_fn)]
 #![no_std]
 #![cfg_attr(target_arch = "avr", no_main)]
-
-pub mod parser;
 
 /*
 extern crate arduino;
 use arduino::{DDRB, PORTB};
 use core::ptr::write_volatile;
 unsafe { write_volatile(DDRB, 0xFF); }
-*/
+ */
+
+pub mod parser;
+pub mod synced;
+pub mod exec;
 
 #[no_mangle]
 #[cfg(target_arch = "avr")]
-pub extern "C" fn main() {}
+pub extern "C" fn main() {
+    exec::run();
+}
 
 #[cfg(target_arch = "avr")]
 pub mod std {
