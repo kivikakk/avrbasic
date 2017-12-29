@@ -135,6 +135,14 @@ impl<'i> PSplitter<'i> {
             Ok(false)
         }
     }
+
+    fn expect_end(&mut self) -> Result<(), ParseError<'i>> {
+        if self.0.peek().is_some() {
+            Err(ParseError::Expected(b"end of statement"))
+        } else {
+            Ok(())
+        }
+    }
 }
 
 pub fn parse<'i>(i: &'i [u8]) -> Result<Statement<'i>, ParseError<'i>> {
@@ -157,8 +165,10 @@ pub fn parse<'i>(i: &'i [u8]) -> Result<Statement<'i>, ParseError<'i>> {
 fn parse_expr<'i>(mut s: PSplitter<'i>) -> Result<Expr<'i>, ParseError<'i>> {
     let (n, tt) = s.0.next().ok_or("missing expr")?;
     tt.expect(TokenType::Number)?;
+    let n = parse_number(n)?;
+    s.expect_end()?;
 
-    Ok(Expr::Number(parse_number(n)?))
+    Ok(Expr::Number(n))
 }
 
 fn parse_number<'i>(mut s: &'i [u8]) -> Result<i32, ParseError<'i>> {
@@ -189,8 +199,11 @@ mod tests {
     #[test]
     fn parse_let() {
         assert_eq!(
-            parse(b"LET X = 1"),
-            Ok(Statement::Let(b"X", Expr::Number(1)))
+            parse(b"LET X = 1 + 2"),
+            Ok(Statement::Let(
+                b"X",
+                Expr::BinOp(BinOp::Add, &Expr::Number(1), &Expr::Number(2))
+            ))
         );
     }
 }
