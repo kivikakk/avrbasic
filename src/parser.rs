@@ -1,4 +1,7 @@
+#[cfg(target_arch = "avr")]
 use core::iter::Peekable;
+#[cfg(not(target_arch = "avr"))]
+use std::iter::Peekable;
 
 #[derive(Debug, PartialEq)]
 pub enum Statement<'i> {
@@ -136,6 +139,7 @@ impl<'i> PSplitter<'i> {
         }
     }
 
+    #[allow(dead_code)]
     fn expect_end(&mut self) -> Result<(), ParseError<'i>> {
         if !self.check_end()? {
             Err(ParseError::Expected(b"end of statement"))
@@ -175,11 +179,11 @@ fn parse_expr<'i>(mut s: PSplitter<'i>) -> Result<Expr<'i>, ParseError<'i>> {
         return Ok(n);
     }
 
-    let (op, tt) = s.0.next().ok_or("missing op")?;
+    let (_op, tt) = s.0.next().ok_or("missing op")?;
     tt.expect(TokenType::BinOp)?;
-    let op = parse_binop(op)?;
+    // let op = parse_binop(op)?;
 
-    let n2 = parse_expr(s)?;
+    // let n2 = parse_expr(s)?;
 
     //Ok(Expr::BinOp(op, &n, &n2))
     Err("no".into())
@@ -206,6 +210,7 @@ fn parse_number<'i>(mut s: &'i [u8]) -> Result<i16, ParseError<'i>> {
     Ok(n * if neg { -1 } else { 1 })
 }
 
+#[allow(dead_code)]
 fn parse_binop<'i>(s: &'i [u8]) -> Result<BinOp, ParseError<'i>> {
     if s.is_empty() {
         return Err("no binop".into());

@@ -1,21 +1,14 @@
-#[derive(Debug, PartialEq)]
-pub enum VarValue {
-    Integer(i16),    // %
-    Single(f32),     // !
-    Double(f64),     // #
-    String(u8, u16), // $
-}
-
-pub type Var = ([u8; 2], VarValue);
+#[cfg(target_arch = "avr")]
+use arduino::{DDRB, PINB, PORTB};
 
 #[cfg(target_arch = "avr")]
 mod heaps {
     use synced::Synced;
 
     pub static VHEAP: Synced<Synced<*mut u8>> =
-        unsafe { Synced::new(Synced::new(0 as *mut _)) };
+        unsafe { Synced::new(Synced::new(0x100 as *mut _)) };
     pub static SHEAP: Synced<Synced<*mut u8>> =
-        unsafe { Synced::new(Synced::new(0x400 as *mut _)) };
+        unsafe { Synced::new(Synced::new(0x500 as *mut _)) };
 }
 
 #[cfg(not(target_arch = "avr"))]
@@ -32,32 +25,118 @@ mod heaps {
 
 use self::heaps::VHEAP;
 
-use arduino::{DDRB, PINB, PORTB};
+#[derive(Debug, PartialEq)]
+pub enum VarValue {
+    Integer(i16),    // %
+    Single(f32),     // !
+    Double(f64),     // #
+    String(u8, u16), // $
+}
+
+pub type Var = ([u8; 2], VarValue);
 
 pub fn run() {
-    // TODO: abstract away any port writes so I can
-    // `cargo run' on amd64.
+    init();
 
+    loop {
+        add_var([b'A', 0], VarValue::Integer(105));
+        let c = readch();
+        let v = get_var([c, 0], b'%');
+
+        match v {
+            VarValue::Integer(i) => {
+                for c in format_integer(i) {
+                    putch(c);
+                }
+                putch(b'\n');
+            }
+            _ => (),
+        }
+    }
+}
+
+fn init() {
+    #[cfg(target_arch = "avr")]
     unsafe {
         DDRB.write_volatile(0x01);
         VHEAP.write_bytes(0, 0x400);
     }
+}
 
-    loop {
-        add_var([b'A', 0], VarValue::Integer(105));
-        let c = unsafe { PINB.read_volatile() };
-        let v = get_var([c, 0], b'%');
+fn readch() -> u8 {
+    #[cfg(target_arch = "avr")]
+    unsafe { PINB.read_volatile() }
 
-        match v {
-            VarValue::Integer(0) => unsafe {
-                PORTB.write_volatile(0xFF);
-            },
-            VarValue::Integer(1) => unsafe {
-                PORTB.write_volatile(0xFE);
-            },
-            _ => (),
-        }
+    #[cfg(not(target_arch = "avr"))]
+    {
+        use termios::{tcsetattr, Termios, ECHO, ICANON, TCSANOW};
+        use std::io::{self, Read};
+
+        let mut b: [u8; 1] = [0];
+        let termios = Termios::from_fd(0).unwrap();
+        let mut termios_read = termios.clone();
+        termios_read.c_lflag &= !(ICANON | ECHO);
+        tcsetattr(0, TCSANOW, &mut termios_read).unwrap();
+        io::stdin().read_exact(&mut b).unwrap();
+        tcsetattr(0, TCSANOW, &termios).unwrap();
+        b[0]
     }
+}
+
+fn putch(c: u8) {
+    #[cfg(not(target_arch = "avr"))]
+    {
+        use std::io::{self, Write};
+
+        let stdout = io::stdout();
+        let mut stdout = stdout.lock();
+        stdout.write(&[c]).unwrap();
+        stdout.flush().unwrap();
+    }
+}
+
+struct IntegerFormatter {
+    i: i32,
+    m: i32,
+}
+
+impl Iterator for IntegerFormatter {
+    type Item = u8;
+
+    fn next(&mut self) -> Option<u8> {
+        if self.m == 0 {
+            return None;
+        }
+
+        if self.i < 0 {
+            self.i = -self.i;
+            return Some(b'-');
+        }
+
+        if self.i >= self.m {
+            let n = self.i / self.m;
+            let r = b'0' + n as u8;
+            self.i -= n * self.m;
+            self.m /= 10;
+            return Some(r);
+        }
+
+        self.m /= 10;
+
+        Some(b'0')
+    }
+}
+
+fn format_integer(i: i16) -> IntegerFormatter {
+    let mut m = 10000;
+    let ai = if i < 0 { -(i as i32) } else { i as i32 };
+    while m > ai && m > 0 {
+        m = m / 10;
+    }
+    if i == 0 {
+        m = 1;
+    }
+    IntegerFormatter { i: i as i32, m: m }
 }
 
 fn add_var(vn: [u8; 2], val: VarValue) {
@@ -145,5 +224,22 @@ mod tests {
         add_var([b'A', 0], VarValue::String(1, 1));
         assert_eq!(get_var([b'A', 0], b'%'), VarValue::Integer(105));
         assert_eq!(get_var([b'A', 0], b'$'), VarValue::String(1, 1));
+    }
+
+    fn assert_int(i: i16) {
+        assert_eq!(
+            format_integer(i).map(|e| e as char).collect::<String>(),
+            format!("{}", i)
+        );
+    }
+
+    #[test]
+    fn formatter() {
+        for &i in &[
+            0, -1, 1, 9, -9, 10, -10, 11, -11, 75, -75, 99, -99, 100, -100, 101, 777, -4258, 32767,
+            -32768,
+        ] {
+            assert_int(i);
+        }
     }
 }

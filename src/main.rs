@@ -1,11 +1,13 @@
 #![feature(lang_items, unwind_attributes, pointer_methods, const_fn)]
-#![no_std]
+#![cfg_attr(target_arch = "avr", no_std)]
 #![cfg_attr(target_arch = "avr", no_main)]
 
 extern crate arduino;
 #[cfg(not(target_arch = "avr"))]
 #[macro_use]
 extern crate lazy_static;
+#[cfg(not(target_arch = "avr"))]
+extern crate termios;
 
 pub mod parser;
 pub mod synced;
@@ -14,6 +16,11 @@ pub mod exec;
 #[no_mangle]
 #[cfg(target_arch = "avr")]
 pub extern "C" fn main() {
+    exec::run();
+}
+
+#[cfg(not(target_arch = "avr"))]
+fn main() {
     exec::run();
 }
 

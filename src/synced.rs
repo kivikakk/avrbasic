@@ -1,5 +1,8 @@
 // https://github.com/rust-lang/rust/issues/35035
+#[cfg(target_arch = "avr")]
 use core::{marker, ops};
+#[cfg(not(target_arch = "avr"))]
+use std::{marker, ops};
 
 pub struct Synced<T>(T);
 
