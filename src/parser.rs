@@ -137,11 +137,15 @@ impl<'i> PSplitter<'i> {
     }
 
     fn expect_end(&mut self) -> Result<(), ParseError<'i>> {
-        if self.0.peek().is_some() {
+        if !self.check_end()? {
             Err(ParseError::Expected(b"end of statement"))
         } else {
             Ok(())
         }
+    }
+
+    fn check_end(&mut self) -> Result<bool, ParseError<'i>> {
+        Ok(self.0.peek().is_none())
     }
 }
 
@@ -165,10 +169,19 @@ pub fn parse<'i>(i: &'i [u8]) -> Result<Statement<'i>, ParseError<'i>> {
 fn parse_expr<'i>(mut s: PSplitter<'i>) -> Result<Expr<'i>, ParseError<'i>> {
     let (n, tt) = s.0.next().ok_or("missing expr")?;
     tt.expect(TokenType::Number)?;
-    let n = parse_number(n)?;
-    s.expect_end()?;
+    let n = Expr::Number(parse_number(n)?);
 
-    Ok(Expr::Number(n))
+    if s.check_end()? {
+        return Ok(n);
+    }
+
+    let (op, tt) = s.0.next().ok_or("missing op")?;
+    tt.expect(TokenType::BinOp)?;
+    let op = parse_binop(op)?;
+
+    let n2 = parse_expr(s)?;
+
+    Ok(Expr::BinOp(op, &n, &n2))
 }
 
 fn parse_number<'i>(mut s: &'i [u8]) -> Result<i32, ParseError<'i>> {
@@ -190,6 +203,23 @@ fn parse_number<'i>(mut s: &'i [u8]) -> Result<i32, ParseError<'i>> {
     }
 
     Ok(n * if neg { -1 } else { 1 })
+}
+
+fn parse_binop<'i>(s: &'i [u8]) -> Result<BinOp, ParseError<'i>> {
+    if s.is_empty() {
+        return Err("no binop".into());
+    }
+
+    if s.len() > 1 {
+        return Err("too much binop".into());
+    }
+
+    Ok(match s[0] {
+        b'+' => BinOp::Add,
+        b'=' => BinOp::Equal,
+        b'-' => BinOp::Subtract,
+        _ => return Err("invalid binop".into()),
+    })
 }
 
 #[cfg(test)]
