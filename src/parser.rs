@@ -137,7 +137,7 @@ impl<'i> PSplitter<'i> {
     }
 }
 
-pub fn parse<'i>(i: &'i [u8]) -> Result<Statement<'i>, ParseError> {
+pub fn parse<'i>(i: &'i [u8]) -> Result<Statement<'i>, ParseError<'i>> {
     let mut s = Splitter { v: i }.psplitter();
 
     if s.check(b"LET")? {
@@ -154,8 +154,32 @@ pub fn parse<'i>(i: &'i [u8]) -> Result<Statement<'i>, ParseError> {
     }
 }
 
-fn parse_expr<'i>(mut s: PSplitter<'i>) -> Result<Expr<'i>, ParseError> {
-    Err("blah".into())
+fn parse_expr<'i>(mut s: PSplitter<'i>) -> Result<Expr<'i>, ParseError<'i>> {
+    let (n, tt) = s.0.next().ok_or("missing expr")?;
+    tt.expect(TokenType::Number)?;
+
+    Ok(Expr::Number(parse_number(n)?))
+}
+
+fn parse_number<'i>(mut s: &'i [u8]) -> Result<i32, ParseError<'i>> {
+    if s.is_empty() {
+        return Err("no number".into());
+    }
+
+    let neg = if s[0] == b'-' {
+        s = &s[1..];
+        true
+    } else {
+        false
+    };
+
+    let mut n: i32 = 0;
+    for c in s {
+        n = (n * 10) + (c - b'0') as i32;
+        s = &s[1..];
+    }
+
+    Ok(n * if neg { -1 } else { 1 })
 }
 
 #[cfg(test)]
