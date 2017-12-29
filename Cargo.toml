@@ -4,3 +4,8 @@ version = "0.1.0"
 authors = ["Ashe Connor <ashe@kivikakk.ee>"]
 
 [dependencies]
+lazy_static = { version = "1.0.0", optional = true }
+arduino = "*"
+
+[features]
+default = ["lazy_static"]

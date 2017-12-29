@@ -1,14 +1,11 @@
-#![feature(lang_items, unwind_attributes)]
-#![feature(const_fn)]
+#![feature(lang_items, unwind_attributes, pointer_methods, const_fn)]
 #![no_std]
 #![cfg_attr(target_arch = "avr", no_main)]
 
-/*
 extern crate arduino;
-use arduino::{DDRB, PORTB};
-use core::ptr::write_volatile;
-unsafe { write_volatile(DDRB, 0xFF); }
- */
+#[cfg(not(target_arch = "avr"))]
+#[macro_use]
+extern crate lazy_static;
 
 pub mod parser;
 pub mod synced;
