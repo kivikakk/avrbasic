@@ -3,16 +3,16 @@ mod heaps {
     use synced::Synced;
 
     pub static VHEAP: Synced<Synced<*mut u8>> =
-        unsafe { Synced::new(Synced::new(0x100 as *mut _)) };
+        unsafe { Synced::new(Synced::new(0x400 as *mut _)) };
     pub static SHEAP: Synced<Synced<*mut u8>> =
-        unsafe { Synced::new(Synced::new(0x500 as *mut _)) };
+        unsafe { Synced::new(Synced::new(0x600 as *mut _)) };
 }
 
 #[cfg(not(target_arch = "avr"))]
 mod heaps {
     use synced::Synced;
 
-    static mut _VHEAP: [u8; 0x400] = [0; 0x400];
+    static mut _VHEAP: [u8; 0x200] = [0; 0x200];
     lazy_static! {
         pub static ref VHEAP: Synced<*mut u8> = unsafe {
             Synced::new(&mut _VHEAP as *const _ as *mut _)
@@ -34,6 +34,8 @@ pub type Var = ([u8; 2], VarValue);
 
 pub fn run() {
     init();
+
+    return;
 
     putstr(b"AVR-BASIC\n");
 
@@ -75,7 +77,7 @@ fn init() {
     unsafe {
         use arduino::{ADPS0, ADPS1, REFS0, ADCSRA, ADEN, ADMUX};
 
-        VHEAP.write_bytes(0, 0x400);
+        VHEAP.write_bytes(0, 0x200);
 
         ADMUX.write_volatile(ADMUX.read_volatile() | REFS0);
         ADCSRA.write_volatile(ADCSRA.read_volatile() | ADPS1 | ADPS0);
@@ -85,13 +87,8 @@ fn init() {
 
         loop {
             prep_display();
-            let mut str: [u8; 5] = [0; 5];
-            str[0] = b'A';
-            str[1] = b'Q';
-            str[2] = b'U';
-            str[3] = b'A';
-            str[4] = 0;
-            draw_str(0, 0, &str as *const _ as *const i8);
+            let mut str: &[u8] = b"AVR-BASIC 0.1";
+            draw_str(0, 0, str as *const _ as *const i8);
             send_display();
         }
     }
