@@ -232,6 +232,9 @@ fn putch(c: u8) {
 fn flush() {
     #[cfg(target_arch = "avr")]
     avr_display::draw();
+
+    #[cfg(not(target_arch = "avr"))]
+    ::std::io::Write::flush(&mut ::std::io::stdout()).unwrap();
 }
 
 fn putstr(cs: &[u8]) {
