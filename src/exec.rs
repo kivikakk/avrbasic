@@ -68,7 +68,7 @@ extern {
     fn init_st7920();
     fn prep_display();
     fn draw_str(x: u8, y: u8, str: *const i8);
-    fn draw_strn(x: u8, y: u8, str: *mut i8, n: u8);
+    fn draw_strn(x: u8, y: u8, str: *mut i8, off: u8, n: u8);
     fn send_display();
 }
 
@@ -206,7 +206,8 @@ mod avr_display {
 
             prep_display();
             for y in 0..6 {
-                draw_strn(0, y, arr.add(y as usize * 21) as *const i8 as *mut i8, 21);
+                let offset = y as u8 * 21;
+                draw_strn(0, y, arr as *mut i8, offset, 21);
             }
             send_display();
         }
