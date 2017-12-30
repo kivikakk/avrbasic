@@ -38,16 +38,16 @@ pub fn run() {
     putstr(b"AVR-BASIC\n");
     flush();
 
+    add_var([b'A', 0], VarValue::Integer(105));
+
     loop {
         let s = getline();
 
-        /*
-        add_var([b'A', 0], VarValue::Integer(105));
-        let c = getch();
-        let v = get_var([c, 0], b'%');
+        let v = get_var([s[0], 0], b'%');
 
         match v {
             VarValue::Integer(i) => {
+                putstr("value: ");
                 for c in format_integer(i) {
                     putch(c);
                 }
@@ -55,7 +55,6 @@ pub fn run() {
             }
             _ => (),
         }
-        */
     }
 }
 
