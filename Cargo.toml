@@ -2,6 +2,7 @@
 name = "avrbasic"
 version = "0.1.0"
 authors = ["Ashe Connor <ashe@kivikakk.ee>"]
+build = "build.rs"
 
 [dependencies]
 lazy_static = { version = "1.0.0", optional = true }

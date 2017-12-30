@@ -1,4 +1,4 @@
-#![feature(lang_items, unwind_attributes, pointer_methods, const_fn)]
+#![feature(lang_items, unwind_attributes, pointer_methods, const_fn, const_cell_new)]
 #![cfg_attr(target_arch = "avr", no_std)]
 #![cfg_attr(target_arch = "avr", no_main)]
 
