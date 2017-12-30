@@ -35,9 +35,8 @@ pub type Var = ([u8; 2], VarValue);
 pub fn run() {
     init();
 
-    return;
-
     putstr(b"AVR-BASIC\n");
+    flush();
 
     loop {
         let s = getline();
@@ -69,6 +68,7 @@ extern {
     fn init_st7920();
     fn prep_display();
     fn draw_str(x: u8, y: u8, str: *const i8);
+    fn draw_strn(x: u8, y: u8, str: *mut i8, n: u8);
     fn send_display();
 }
 
@@ -84,13 +84,6 @@ fn init() {
         ADCSRA.write_volatile(ADCSRA.read_volatile() | ADEN);
 
         init_st7920();
-
-        loop {
-            prep_display();
-            let mut str: &[u8] = b"AVR-BASIC 0.1";
-            draw_str(0, 0, str as *const _ as *const i8);
-            send_display();
-        }
     }
 }
 
@@ -151,6 +144,7 @@ fn getline() -> [u8; 128] {
             | b'/' => {
                 if i < 128 {
                     putch(c);
+                    flush();
                     l[i] = c;
                     i += 1;
                 }
@@ -159,6 +153,7 @@ fn getline() -> [u8; 128] {
             b'a'...b'z' => {
                 if i < 128 {
                     putch(c - (b'a' - b'A'));
+                    flush();
                     l[i] = c - (b'a' - b'A');
                     i += 1;
                 }
@@ -167,11 +162,13 @@ fn getline() -> [u8; 128] {
             127 => {
                 if i > 0 {
                     putstr(&[8, b' ', 8]);
+                    flush();
                     i -= 1;
                 }
             }
             10 => {
                 putch(b'\n');
+                flush();
                 return l;
             }
             _ => (),
@@ -183,7 +180,7 @@ fn getline() -> [u8; 128] {
 mod avr_display {
     use core::cell::Cell;
     use synced::Synced;
-    use exec::{prep_display, draw_str, send_display};
+    use exec::{prep_display, draw_strn, send_display};
 
     static X: Synced<Cell<u8>> = unsafe { Synced::new(Cell::new(0)) };
     static Y: Synced<Cell<u8>> = unsafe { Synced::new(Cell::new(0)) };
@@ -199,16 +196,22 @@ mod avr_display {
         unsafe { arr.add((y as usize * 21) + x as usize).write(c); }
         X.set(x + 1);
 
+        LINES.set(lines);
+    }
+
+    pub fn draw() {
         unsafe {
+            let mut lines = LINES.get();
+            let arr: *mut u8 = &mut lines as *const _ as *mut _;
+
             prep_display();
             for y in 0..6 {
-                draw_str(0, y, arr.add(y as usize * 21) as *const i8);
+                draw_strn(0, y, arr.add(y as usize * 21) as *const i8 as *mut i8, 21);
             }
             send_display();
         }
-
-        LINES.set(lines);
     }
+
 }
 
 fn putch(c: u8) {
@@ -222,8 +225,12 @@ fn putch(c: u8) {
         let stdout = io::stdout();
         let mut stdout = stdout.lock();
         stdout.write(&[c]).unwrap();
-        stdout.flush().unwrap();
     }
+}
+
+fn flush() {
+    #[cfg(target_arch = "avr")]
+    avr_display::draw();
 }
 
 fn putstr(cs: &[u8]) {
