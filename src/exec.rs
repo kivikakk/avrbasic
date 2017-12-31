@@ -178,6 +178,10 @@ pub fn get_var(vn: [u8; 2], t: u8) -> VarValue {
     }
 }
 
+pub fn get_str(len: u8, off: u16) -> &'static [u8] {
+    &[]
+}
+
 pub fn clear_vars() {
     unsafe {
         VHEAP.write(0);

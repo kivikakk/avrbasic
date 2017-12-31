@@ -1,5 +1,8 @@
 TARGET = target/avr-atmega328p/release/avrbasic.elf
 
+test:
+	RUST_TEST_THREADS=1 cargo test
+
 all:
 	./build.sh
 

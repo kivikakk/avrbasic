@@ -1,4 +1,4 @@
-use exec::{add_var, VarValue};
+use exec::{add_str, add_var, VarValue};
 
 #[cfg(target_arch = "avr")]
 use core::iter::Peekable;
@@ -42,13 +42,6 @@ pub enum Expr<'i> {
     BinOp(BinOp, &'i Expr<'i>, &'i Expr<'i>),
 }
 
-#[derive(Debug, PartialEq, Clone)]
-pub enum TokenType {
-    Number,
-    Label,
-    BinOp,
-}
-
 #[derive(Debug, PartialEq)]
 pub enum InterpError<'i> {
     Empty,
@@ -64,13 +57,25 @@ impl<'i> From<&'static str> for InterpError<'i> {
     }
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum TokenType {
+    Number,
+    Label,
+    BinOp,
+    String,
+}
+
 impl TokenType {
     fn expect<'i>(&self, r: &TokenType) -> Result<(), InterpError<'i>> {
-        if self != r {
+        if !self.check(r) {
             Err(InterpError::BadTokenType((*self).clone()))
         } else {
             Ok(())
         }
+    }
+
+    fn check(&self, r: &TokenType) -> bool {
+        self == r
     }
 }
 
@@ -114,6 +119,7 @@ impl<'i> Splitter<'i> {
                 b'0'...b'9' => TokenType::Number,
                 b'A'...b'Z' => TokenType::Label,
                 b'+' | b'-' | b'*' | b'/' | b'%' | b'=' => TokenType::BinOp,
+                b'"' => TokenType::String,
 
                 c => {
                     #[cfg(not(target_arch = "avr"))]
@@ -127,6 +133,7 @@ impl<'i> Splitter<'i> {
                 b'+' | b'-' | b'*' | b'/' | b'=' => TokenType::BinOp,
                 _ => panic!(),
             },
+            Some(&TokenType::String) => TokenType::String,
         }
     }
 
@@ -200,30 +207,38 @@ pub fn interp(i: &[u8]) -> Result<(), InterpError> {
 
 fn interp_expr(mut s: PSplitter) -> Result<VarValue, InterpError> {
     let (n, tt) = s.0.next().ok_or("missing expr")?;
-    tt.expect(&TokenType::Number)?;
-    let n = parse_number(n)?;
 
-    if s.check_end()? {
-        return Ok(VarValue::Integer(n));
-    }
+    if tt.check(&TokenType::Number) {
+        let n = parse_number(n)?;
 
-    let (op, tt) = s.0.next().ok_or("missing op")?;
-    tt.expect(&TokenType::BinOp)?;
-    let op = parse_binop(op)?;
+        if s.check_end()? {
+            return Ok(VarValue::Integer(n));
+        }
 
-    let n2 = interp_expr(s)?;
+        let (op, tt) = s.0.next().ok_or("missing op")?;
+        tt.expect(&TokenType::BinOp)?;
+        let op = parse_binop(op)?;
 
-    match n2 {
-        VarValue::Integer(n2) => Ok(VarValue::Integer(match op {
-            BinOp::Add => n + n2,
-            BinOp::Subtract => n - n2,
-            BinOp::Equal => if n == n2 {
-                1
-            } else {
-                0
-            },
-        })),
-        _ => Err("bad add".into()),
+        let n2 = interp_expr(s)?;
+
+        match n2 {
+            VarValue::Integer(n2) => Ok(VarValue::Integer(match op {
+                BinOp::Add => n + n2,
+                BinOp::Subtract => n - n2,
+                BinOp::Equal => if n == n2 {
+                    1
+                } else {
+                    0
+                },
+            })),
+            _ => Err("bad add".into()),
+        }
+    } else if tt.check(&TokenType::String) {
+        let n = &n[1..n.len() - 1];
+        let (len, o) = add_str(n);
+        Ok(VarValue::String(len, o))
+    } else {
+        Err(InterpError::BadTokenType(tt))
     }
 }
 
@@ -269,7 +284,7 @@ fn parse_binop(s: &[u8]) -> Result<BinOp, InterpError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use exec::{clear_vars, get_var};
+    use exec::{clear_vars, get_str, get_var};
 
     #[test]
     fn interp_let() {
@@ -277,6 +292,9 @@ mod tests {
         assert_eq!(get_var([b'X', 0], b'%'), VarValue::Integer(0));
         assert_eq!(interp(b"LET X% = 1"), Ok(()));
         assert_eq!(get_var([b'X', 0], b'%'), VarValue::Integer(1));
+        assert_eq!(interp(b"LET X$ = \"ROBOT\""), Ok(()));
+        assert_eq!(get_var([b'X', 0], b'$'), VarValue::String(5, 0));
+        assert_eq!(get_str(0, 5), b"ROBOT");
     }
 
     #[test]
@@ -291,5 +309,10 @@ mod tests {
         assert_eq!(get_var([b'X', 0], b'%'), VarValue::Integer(0));
         assert_eq!(interp(b"LET X% = 2 = 2"), Ok(()));
         assert_eq!(get_var([b'X', 0], b'%'), VarValue::Integer(1));
+
+        assert_eq!(get_var([b'X', 0], b'$'), VarValue::String(0, 0));
+        assert_eq!(interp(b"LET X$ = \"ROB\" + \"OTS\""), Ok(()));
+        assert_eq!(get_var([b'X', 0], b'$'), VarValue::String(6, 0));
+        assert_eq!(get_str(0, 6), b"ROBOTS");
     }
 }

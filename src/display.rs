@@ -82,6 +82,7 @@ pub fn getline() -> ([u8; 128], u8) {
             | b'+'
             | b'-'
             | b'='
+            | b'"'
             | b'/' => {
                 if i < 128 {
                     putch(c);
