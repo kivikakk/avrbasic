@@ -84,6 +84,7 @@ fn add_var(vn: [u8; 2], val: &VarValue) {
         let mut h = **VHEAP;
 
         loop {
+            // TODO: overwrite
             if h.read() != 0 {
                 let t = h.add(2).read();
                 match t {
@@ -118,26 +119,36 @@ fn add_var(vn: [u8; 2], val: &VarValue) {
 
 fn get_var(vn: [u8; 2], t: u8) -> VarValue {
     unsafe {
-        let h = **VHEAP;
+        let mut h = **VHEAP;
 
-        let a1 = h.read();
-        if a1 == vn[0] {
-            let a2 = h.add(1).read();
-            if a2 == vn[1] {
-                match h.add(2).read() {
-                    1 => if t == b'%' {
-                        let b = h.add(3).read();
-                        let a = h.add(4).read();
-                        return VarValue::Integer((u16::from(a) << 8 | u16::from(b)) as i16);
-                    },
-                    4 => if t == b'$' {
-                        let off = h.add(3).read();
-                        let b = h.add(4).read();
-                        let a = h.add(5).read();
-                        return VarValue::String(off, ((u16::from(a) << 8) | u16::from(b)));
-                    },
-                    _ => panic!("???"),
+        loop {
+            let a1 = h.read();
+            if a1 == 0 {
+                break;
+            } else if a1 == vn[0] {
+                let a2 = h.add(1).read();
+                if a2 == vn[1] {
+                    match h.add(2).read() {
+                        1 => if t == b'%' {
+                            let b = h.add(3).read();
+                            let a = h.add(4).read();
+                            return VarValue::Integer((u16::from(a) << 8 | u16::from(b)) as i16);
+                        },
+                        4 => if t == b'$' {
+                            let off = h.add(3).read();
+                            let b = h.add(4).read();
+                            let a = h.add(5).read();
+                            return VarValue::String(off, ((u16::from(a) << 8) | u16::from(b)));
+                        },
+                        _ => panic!("???"),
+                    }
                 }
+            }
+
+            match h.add(2).read() {
+                1 => h = h.add(5),
+                4 => h = h.add(6),
+                _ => panic!("eh"),
             }
         }
 
@@ -164,22 +175,5 @@ mod tests {
         add_var([b'A', 0], &VarValue::String(1, 1));
         assert_eq!(get_var([b'A', 0], b'%'), VarValue::Integer(105));
         assert_eq!(get_var([b'A', 0], b'$'), VarValue::String(1, 1));
-    }
-
-    fn assert_int(i: i16) {
-        assert_eq!(
-            format_integer(i).map(|e| e as char).collect::<String>(),
-            format!("{}", i)
-        );
-    }
-
-    #[test]
-    fn formatter() {
-        for &i in &[
-            0, -1, 1, 9, -9, 10, -10, 11, -11, 75, -75, 99, -99, 100, -100, 101, 777, -4258, 32767,
-            -32768,
-        ] {
-            assert_int(i);
-        }
     }
 }

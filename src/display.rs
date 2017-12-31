@@ -248,3 +248,25 @@ pub fn format_integer(i: i16) -> IntegerFormatter {
         m: m,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn assert_int(i: i16) {
+        assert_eq!(
+            format_integer(i).map(|e| e as char).collect::<String>(),
+            format!("{}", i)
+        );
+    }
+
+    #[test]
+    fn formatter() {
+        for &i in &[
+            0, -1, 1, 9, -9, 10, -10, 11, -11, 75, -75, 99, -99, 100, -100, 101, 777, -4258, 32767,
+            -32768,
+        ] {
+            assert_int(i);
+        }
+    }
+}
