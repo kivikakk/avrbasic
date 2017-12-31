@@ -175,5 +175,9 @@ mod tests {
         add_var([b'A', 0], &VarValue::String(1, 1));
         assert_eq!(get_var([b'A', 0], b'%'), VarValue::Integer(105));
         assert_eq!(get_var([b'A', 0], b'$'), VarValue::String(1, 1));
+
+        add_var([b'A', 0], &VarValue::String(2, 2));
+        assert_eq!(get_var([b'A', 0], b'%'), VarValue::Integer(105));
+        assert_eq!(get_var([b'A', 0], b'$'), VarValue::String(2, 2));
     }
 }
