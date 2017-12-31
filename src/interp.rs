@@ -50,7 +50,7 @@ pub enum TokenType {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum ParseError<'i> {
+pub enum InterpError<'i> {
     Empty,
     UnknownToken(&'i [u8]),
     BadTokenType(TokenType),
@@ -58,16 +58,16 @@ pub enum ParseError<'i> {
     Other(&'static str),
 }
 
-impl<'i> From<&'static str> for ParseError<'i> {
-    fn from(s: &'static str) -> ParseError<'i> {
-        ParseError::Other(s)
+impl<'i> From<&'static str> for InterpError<'i> {
+    fn from(s: &'static str) -> InterpError<'i> {
+        InterpError::Other(s)
     }
 }
 
 impl TokenType {
-    fn expect<'i>(&self, r: &TokenType) -> Result<(), ParseError<'i>> {
+    fn expect<'i>(&self, r: &TokenType) -> Result<(), InterpError<'i>> {
         if self != r {
-            Err(ParseError::BadTokenType((*self).clone()))
+            Err(InterpError::BadTokenType((*self).clone()))
         } else {
             Ok(())
         }
@@ -131,16 +131,16 @@ impl<'i> Splitter<'i> {
 struct PSplitter<'i>(pub Peekable<Splitter<'i>>);
 
 impl<'i> PSplitter<'i> {
-    fn expect(&mut self, s: &'static [u8]) -> Result<(), ParseError<'i>> {
+    fn expect(&mut self, s: &'static [u8]) -> Result<(), InterpError<'i>> {
         if !self.check(s)? {
-            Err(ParseError::Expected(s))
+            Err(InterpError::Expected(s))
         } else {
             Ok(())
         }
     }
 
-    fn check(&mut self, s: &'static [u8]) -> Result<bool, ParseError<'i>> {
-        let &(t, _) = self.0.peek().ok_or(ParseError::Empty)?;
+    fn check(&mut self, s: &'static [u8]) -> Result<bool, InterpError<'i>> {
+        let &(t, _) = self.0.peek().ok_or(InterpError::Empty)?;
         if t == s {
             self.0.next();
             Ok(true)
@@ -150,20 +150,20 @@ impl<'i> PSplitter<'i> {
     }
 
     #[allow(dead_code)]
-    fn expect_end(&mut self) -> Result<(), ParseError<'i>> {
+    fn expect_end(&mut self) -> Result<(), InterpError<'i>> {
         if !self.check_end()? {
-            Err(ParseError::Expected(b"end of statement"))
+            Err(InterpError::Expected(b"end of statement"))
         } else {
             Ok(())
         }
     }
 
-    fn check_end(&mut self) -> Result<bool, ParseError<'i>> {
+    fn check_end(&mut self) -> Result<bool, InterpError<'i>> {
         Ok(self.0.peek().is_none())
     }
 }
 
-pub fn parse(i: &[u8]) -> Result<(), ParseError> {
+pub fn interp(i: &[u8]) -> Result<(), InterpError> {
     let mut s = Splitter { v: i }.psplitter();
 
     if s.check(b"LET")? {
@@ -172,29 +172,29 @@ pub fn parse(i: &[u8]) -> Result<(), ParseError> {
 
         match v[v.len() - 1] {
             b'%' | b'$' => (),
-            _ => return Err(ParseError::Other("expected var type")),
+            _ => return Err(InterpError::Other("expected var type")),
         }
 
         s.expect(b"=")?;
 
-        let r = parse_expr(s)?;
+        let r = interp_expr(s)?;
 
         let vn: [u8; 2] = [v[0], if v.len() > 2 { v[1] } else { 0 }];
         match (v[v.len() - 1], &r) {
             (b'%', &VarValue::Integer(..)) | (b'$', &VarValue::String(..)) => add_var(vn, &r),
-            _ => return Err(ParseError::Other("bad return value")),
+            _ => return Err(InterpError::Other("bad return value")),
         };
 
         Ok(())
     } else {
-        Err(ParseError::UnknownToken(s.0.next().unwrap().0))
+        Err(InterpError::UnknownToken(s.0.next().unwrap().0))
     }
 }
 
-fn parse_expr(mut s: PSplitter) -> Result<VarValue, ParseError> {
+fn interp_expr(mut s: PSplitter) -> Result<VarValue, InterpError> {
     let (n, tt) = s.0.next().ok_or("missing expr")?;
     tt.expect(&TokenType::Number)?;
-    let n = VarValue::Integer(parse_number(n)?);
+    let n = VarValue::Integer(interp_number(n)?);
 
     if s.check_end()? {
         return Ok(n);
@@ -202,15 +202,15 @@ fn parse_expr(mut s: PSplitter) -> Result<VarValue, ParseError> {
 
     let (_op, tt) = s.0.next().ok_or("missing op")?;
     tt.expect(&TokenType::BinOp)?;
-    // let op = parse_binop(op)?;
+    // let op = interp_binop(op)?;
 
-    // let n2 = parse_expr(s)?;
+    // let n2 = interp_expr(s)?;
 
     //Ok(Expr::BinOp(op, &n, &n2))
     Err("no".into())
 }
 
-fn parse_number(mut s: &[u8]) -> Result<i16, ParseError> {
+fn interp_number(mut s: &[u8]) -> Result<i16, InterpError> {
     if s.is_empty() {
         return Err("no number".into());
     }
@@ -232,7 +232,7 @@ fn parse_number(mut s: &[u8]) -> Result<i16, ParseError> {
 }
 
 #[allow(dead_code)]
-fn parse_binop(s: &[u8]) -> Result<BinOp, ParseError> {
+fn interp_binop(s: &[u8]) -> Result<BinOp, InterpError> {
     if s.is_empty() {
         return Err("no binop".into());
     }
@@ -252,12 +252,12 @@ fn parse_binop(s: &[u8]) -> Result<BinOp, ParseError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use exec::get_var;
 
     #[test]
-    fn parse_let() {
-        assert_eq!(
-            parse(b"LET X = 1"),
-            Ok(Statement::Let(b"X", Expr::Number(1)))
-        );
+    fn interp_let() {
+        assert_eq!(get_var([b'X', 0], b'%'), VarValue::Integer(0));
+        assert_eq!(interp(b"LET X% = 1"), Ok(()));
+        assert_eq!(get_var([b'X', 0], b'%'), VarValue::Integer(1));
     }
 }

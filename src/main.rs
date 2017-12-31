@@ -9,7 +9,7 @@ extern crate lazy_static;
 #[cfg(not(target_arch = "avr"))]
 extern crate termios;
 
-pub mod parser;
+pub mod interp;
 pub mod synced;
 pub mod exec;
 pub mod display;

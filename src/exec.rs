@@ -1,5 +1,5 @@
 use display::{flush, format_integer, getline, putch, putstr, Screen};
-use parser::parse;
+use interp::interp;
 
 #[cfg(target_arch = "avr")]
 use core::fmt::Write;
@@ -63,7 +63,7 @@ pub fn run() {
     loop {
         let (s, l) = getline();
 
-        match parse(&s[..l as usize]) {
+        match interp(&s[..l as usize]) {
             Ok(()) => (),
             Err(e) => {
                 write!(&mut Screen, "{:?}", e).unwrap();
