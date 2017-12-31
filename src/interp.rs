@@ -108,12 +108,19 @@ impl<'i> Iterator for Splitter<'i> {
 
 impl<'i> Splitter<'i> {
     fn tt(c: u8, s: Option<&TokenType>) -> TokenType {
+        #[cfg_attr(target_arch = "avr", allow(unused_variables))]
         match s {
             None | Some(&TokenType::Number) | Some(&TokenType::BinOp) => match c {
                 b'0'...b'9' => TokenType::Number,
                 b'A'...b'Z' => TokenType::Label,
                 b'+' | b'-' | b'*' | b'/' | b'%' | b'=' => TokenType::BinOp,
-                c => panic!("got char {:?}", c as char),
+
+                c => {
+                    #[cfg(not(target_arch = "avr"))]
+                    panic!("got char {:?}", c as char);
+                    #[cfg(target_arch = "avr")]
+                    panic!();
+                }
             },
             Some(&TokenType::Label) => match c {
                 b'0'...b'9' | b'A'...b'Z' | b'!' | b'$' | b'#' | b'%' => TokenType::Label,
@@ -194,23 +201,33 @@ pub fn interp(i: &[u8]) -> Result<(), InterpError> {
 fn interp_expr(mut s: PSplitter) -> Result<VarValue, InterpError> {
     let (n, tt) = s.0.next().ok_or("missing expr")?;
     tt.expect(&TokenType::Number)?;
-    let n = VarValue::Integer(interp_number(n)?);
+    let n = parse_number(n)?;
 
     if s.check_end()? {
-        return Ok(n);
+        return Ok(VarValue::Integer(n));
     }
 
-    let (_op, tt) = s.0.next().ok_or("missing op")?;
+    let (op, tt) = s.0.next().ok_or("missing op")?;
     tt.expect(&TokenType::BinOp)?;
-    // let op = interp_binop(op)?;
+    let op = parse_binop(op)?;
 
-    // let n2 = interp_expr(s)?;
+    let n2 = interp_expr(s)?;
 
-    //Ok(Expr::BinOp(op, &n, &n2))
-    Err("no".into())
+    match n2 {
+        VarValue::Integer(n2) => Ok(VarValue::Integer(match op {
+            BinOp::Add => n + n2,
+            BinOp::Subtract => n - n2,
+            BinOp::Equal => if n == n2 {
+                1
+            } else {
+                0
+            },
+        })),
+        _ => Err("bad add".into()),
+    }
 }
 
-fn interp_number(mut s: &[u8]) -> Result<i16, InterpError> {
+fn parse_number(mut s: &[u8]) -> Result<i16, InterpError> {
     if s.is_empty() {
         return Err("no number".into());
     }
@@ -232,7 +249,7 @@ fn interp_number(mut s: &[u8]) -> Result<i16, InterpError> {
 }
 
 #[allow(dead_code)]
-fn interp_binop(s: &[u8]) -> Result<BinOp, InterpError> {
+fn parse_binop(s: &[u8]) -> Result<BinOp, InterpError> {
     if s.is_empty() {
         return Err("no binop".into());
     }
@@ -252,12 +269,21 @@ fn interp_binop(s: &[u8]) -> Result<BinOp, InterpError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use exec::get_var;
+    use exec::{clear_vars, get_var};
 
     #[test]
     fn interp_let() {
+        clear_vars();
         assert_eq!(get_var([b'X', 0], b'%'), VarValue::Integer(0));
         assert_eq!(interp(b"LET X% = 1"), Ok(()));
         assert_eq!(get_var([b'X', 0], b'%'), VarValue::Integer(1));
+    }
+
+    #[test]
+    fn interp_binop() {
+        clear_vars();
+        assert_eq!(get_var([b'X', 0], b'%'), VarValue::Integer(0));
+        assert_eq!(interp(b"LET X% = 1 + 2"), Ok(()));
+        assert_eq!(get_var([b'X', 0], b'%'), VarValue::Integer(3));
     }
 }

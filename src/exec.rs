@@ -178,6 +178,12 @@ pub fn get_var(vn: [u8; 2], t: u8) -> VarValue {
     }
 }
 
+pub fn clear_vars() {
+    unsafe {
+        VHEAP.write(0);
+    }
+}
+
 pub fn add_str(s: &[u8]) -> (u8, u16) {
     assert!(s.len() <= 255);
     let mut so: u16 = 0;
@@ -225,6 +231,8 @@ mod tests {
 
     #[test]
     fn add() {
+        clear_vars();
+
         add_var([b'A', 0], &VarValue::Integer(105));
         assert_eq!(get_var([b'A', 0], b'%'), VarValue::Integer(105));
         assert_eq!(get_var([b'A', 0], b'$'), VarValue::String(0, 0));
