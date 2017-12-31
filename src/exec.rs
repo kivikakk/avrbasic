@@ -4,8 +4,8 @@ mod heaps {
 
     pub static VHEAP: Synced<Synced<*mut u8>> =
         unsafe { Synced::new(Synced::new(0x400 as *mut _)) };
-    pub static SHEAP: Synced<Synced<*mut u8>> =
-        unsafe { Synced::new(Synced::new(0x600 as *mut _)) };
+    //    pub static SHEAP: Synced<Synced<*mut u8>> =
+    //        unsafe { Synced::new(Synced::new(0x600 as *mut _)) };
 }
 
 #[cfg(not(target_arch = "avr"))]
@@ -38,7 +38,7 @@ pub fn run() {
     putstr(b"AVR-BASIC\n");
     flush();
 
-    add_var([b'A', 0], VarValue::Integer(105));
+    add_var([b'A', 0], &VarValue::Integer(105));
 
     loop {
         let s = getline();
@@ -47,11 +47,14 @@ pub fn run() {
 
         match v {
             VarValue::Integer(i) => {
-                putstr("value: ");
+                putstr(b"value: ");
                 for c in format_integer(i) {
                     putch(c);
                 }
                 putch(b'\n');
+            }
+            VarValue::String(_o, _l) => {
+                // ...
             }
             _ => (),
         }
@@ -59,14 +62,11 @@ pub fn run() {
 }
 
 #[cfg(target_arch = "avr")]
-enum U8g2 {}
-
-#[cfg(target_arch = "avr")]
 #[link(name = "u8g2")]
-extern {
+extern "C" {
     fn init_st7920();
     fn prep_display();
-    fn draw_str(x: u8, y: u8, str: *const i8);
+    // fn draw_str(x: u8, y: u8, str: *const i8);
     fn draw_strn(x: u8, y: u8, str: *mut i8, off: u8, n: u8);
     fn send_display();
 }
@@ -113,9 +113,9 @@ fn getch() -> u8 {
 
         let mut b: [u8; 1] = [0];
         let termios = Termios::from_fd(0).unwrap();
-        let mut termios_read = termios.clone();
+        let mut termios_read = termios;
         termios_read.c_lflag &= !(ICANON | ECHO);
-        tcsetattr(0, TCSANOW, &mut termios_read).unwrap();
+        tcsetattr(0, TCSANOW, &termios_read).unwrap();
         io::stdin().read_exact(&mut b).unwrap();
         tcsetattr(0, TCSANOW, &termios).unwrap();
         b[0]
@@ -179,21 +179,45 @@ fn getline() -> [u8; 128] {
 mod avr_display {
     use core::cell::Cell;
     use synced::Synced;
-    use exec::{prep_display, draw_strn, send_display};
+    use exec::{draw_strn, prep_display, send_display};
 
+    const W: usize = 21;
+    const H: usize = 6;
     static X: Synced<Cell<u8>> = unsafe { Synced::new(Cell::new(0)) };
     static Y: Synced<Cell<u8>> = unsafe { Synced::new(Cell::new(0)) };
-    static LINES: Synced<Cell<[u8; 21 * 6]>> = unsafe { Synced::new(Cell::new([0; 21 * 6])) };
+    static LINES: Synced<Cell<[u8; W * H]>> = unsafe { Synced::new(Cell::new([0; W * H])) };
 
     pub fn putch(c: u8) {
         let mut lines = LINES.get();
         let x = X.get();
-        let mut y = Y.get();
+        let y = Y.get();
 
         let arr: *mut u8 = &mut lines as *const _ as *mut _;
-        // lol
-        unsafe { arr.add((y as usize * 21) + x as usize).write(c); }
-        X.set(x + 1);
+
+        if c == 8 {
+            if x > 0 {
+                X.set(x - 1);
+            }
+        } else if c == 10 {
+            if y < 5 {
+                Y.set(y + 1);
+                X.set(0);
+            } else {
+                unsafe {
+                    for i in 0..(H - 1) {
+                        arr.add(i as usize * W)
+                            .copy_from_nonoverlapping(arr.add((i + 1) as usize * W), W);
+                    }
+                    arr.add((H - 1) * W).write_bytes(0, W);
+                }
+                X.set(0);
+            }
+        } else {
+            unsafe {
+                arr.add((y as usize * W) + x as usize).write(c);
+            }
+            X.set(x + 1);
+        }
 
         LINES.set(lines);
     }
@@ -204,9 +228,9 @@ mod avr_display {
             let arr: *mut u8 = &mut lines as *const _ as *mut _;
 
             prep_display();
-            for y in 0..6 {
-                let offset = y as u8 * 21;
-                draw_strn(0, y, arr as *mut i8, offset, 21);
+            for y in 0..H {
+                let offset = (y * W) as usize;
+                draw_strn(0, y as u8, arr as *mut i8, offset as u8, W as u8);
             }
             send_display();
         }
@@ -224,7 +248,7 @@ fn putch(c: u8) {
 
         let stdout = io::stdout();
         let mut stdout = stdout.lock();
-        stdout.write(&[c]).unwrap();
+        stdout.write_all(&[c]).unwrap();
     }
 }
 
@@ -275,18 +299,21 @@ impl Iterator for IntegerFormatter {
 }
 
 fn format_integer(i: i16) -> IntegerFormatter {
-    let mut m = 10000;
-    let ai = if i < 0 { -(i as i32) } else { i as i32 };
+    let mut m = 10_000;
+    let ai = if i < 0 { -i32::from(i) } else { i32::from(i) };
     while m > ai && m > 0 {
-        m = m / 10;
+        m /= 10;
     }
     if i == 0 {
         m = 1;
     }
-    IntegerFormatter { i: i as i32, m: m }
+    IntegerFormatter {
+        i: i32::from(i),
+        m: m,
+    }
 }
 
-fn add_var(vn: [u8; 2], val: VarValue) {
+fn add_var(vn: [u8; 2], val: &VarValue) {
     unsafe {
         let mut h = **VHEAP;
 
@@ -303,7 +330,7 @@ fn add_var(vn: [u8; 2], val: VarValue) {
 
             h.write(vn[0]);
             h.add(1).write(vn[1]);
-            match val {
+            match *val {
                 VarValue::Integer(i) => {
                     h.add(2).write(1);
                     h.add(3).write((i & 0xFF) as u8);
@@ -335,13 +362,13 @@ fn get_var(vn: [u8; 2], t: u8) -> VarValue {
                     1 => if t == b'%' {
                         let b = h.add(3).read();
                         let a = h.add(4).read();
-                        return VarValue::Integer(((a as u16) << 8 | (b as u16)) as i16);
+                        return VarValue::Integer((u16::from(a) << 8 | u16::from(b)) as i16);
                     },
                     4 => if t == b'$' {
-                        let s = h.add(3).read();
+                        let off = h.add(3).read();
                         let b = h.add(4).read();
                         let a = h.add(5).read();
-                        return VarValue::String(s, (((a as u16) << 8) | (b as u16)) as u16);
+                        return VarValue::String(off, ((u16::from(a) << 8) | u16::from(b)));
                     },
                     _ => panic!("???"),
                 }
@@ -364,11 +391,11 @@ mod tests {
 
     #[test]
     fn add() {
-        add_var([b'A', 0], VarValue::Integer(105));
+        add_var([b'A', 0], &VarValue::Integer(105));
         assert_eq!(get_var([b'A', 0], b'%'), VarValue::Integer(105));
         assert_eq!(get_var([b'A', 0], b'$'), VarValue::String(0, 0));
 
-        add_var([b'A', 0], VarValue::String(1, 1));
+        add_var([b'A', 0], &VarValue::String(1, 1));
         assert_eq!(get_var([b'A', 0], b'%'), VarValue::Integer(105));
         assert_eq!(get_var([b'A', 0], b'$'), VarValue::String(1, 1));
     }

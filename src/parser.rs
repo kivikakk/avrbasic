@@ -63,8 +63,8 @@ impl<'i> From<&'static str> for ParseError<'i> {
 }
 
 impl TokenType {
-    fn expect<'i>(&self, r: TokenType) -> Result<(), ParseError<'i>> {
-        if *self != r {
+    fn expect<'i>(&self, r: &TokenType) -> Result<(), ParseError<'i>> {
+        if self != r {
             Err(ParseError::BadTokenType((*self).clone()))
         } else {
             Ok(())
@@ -153,12 +153,12 @@ impl<'i> PSplitter<'i> {
     }
 }
 
-pub fn parse<'i>(i: &'i [u8]) -> Result<Statement<'i>, ParseError<'i>> {
+pub fn parse(i: &[u8]) -> Result<Statement, ParseError> {
     let mut s = Splitter { v: i }.psplitter();
 
     if s.check(b"LET")? {
         let (v, tt) = s.0.next().ok_or("missing LET variable")?;
-        tt.expect(TokenType::Label)?;
+        tt.expect(&TokenType::Label)?;
 
         s.expect(b"=")?;
 
@@ -170,9 +170,9 @@ pub fn parse<'i>(i: &'i [u8]) -> Result<Statement<'i>, ParseError<'i>> {
     }
 }
 
-fn parse_expr<'i>(mut s: PSplitter<'i>) -> Result<Expr<'i>, ParseError<'i>> {
+fn parse_expr(mut s: PSplitter) -> Result<Expr, ParseError> {
     let (n, tt) = s.0.next().ok_or("missing expr")?;
-    tt.expect(TokenType::Number)?;
+    tt.expect(&TokenType::Number)?;
     let n = Expr::Number(parse_number(n)?);
 
     if s.check_end()? {
@@ -180,7 +180,7 @@ fn parse_expr<'i>(mut s: PSplitter<'i>) -> Result<Expr<'i>, ParseError<'i>> {
     }
 
     let (_op, tt) = s.0.next().ok_or("missing op")?;
-    tt.expect(TokenType::BinOp)?;
+    tt.expect(&TokenType::BinOp)?;
     // let op = parse_binop(op)?;
 
     // let n2 = parse_expr(s)?;
@@ -189,7 +189,7 @@ fn parse_expr<'i>(mut s: PSplitter<'i>) -> Result<Expr<'i>, ParseError<'i>> {
     Err("no".into())
 }
 
-fn parse_number<'i>(mut s: &'i [u8]) -> Result<i16, ParseError<'i>> {
+fn parse_number(mut s: &[u8]) -> Result<i16, ParseError> {
     if s.is_empty() {
         return Err("no number".into());
     }
@@ -203,7 +203,7 @@ fn parse_number<'i>(mut s: &'i [u8]) -> Result<i16, ParseError<'i>> {
 
     let mut n: i16 = 0;
     for c in s {
-        n = (n * 10) + (c - b'0') as i16;
+        n = (n * 10) + i16::from(c - b'0');
         s = &s[1..];
     }
 
@@ -211,7 +211,7 @@ fn parse_number<'i>(mut s: &'i [u8]) -> Result<i16, ParseError<'i>> {
 }
 
 #[allow(dead_code)]
-fn parse_binop<'i>(s: &'i [u8]) -> Result<BinOp, ParseError<'i>> {
+fn parse_binop(s: &[u8]) -> Result<BinOp, ParseError> {
     if s.is_empty() {
         return Err("no binop".into());
     }
