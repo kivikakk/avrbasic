@@ -15,3 +15,7 @@ gdb:
 flash: all
 	avr-objcopy -j .text -j .data -j .eeprom -O ihex $(TARGET) $(TARGET:.elf=.hex)
 	avrdude -c usbtiny -p atmega328p -U flash:w:$(TARGET:.elf=.hex) -B 1
+
+docker:
+	docker build -t avrbasic  $(CURDIR)
+	docker run --privileged -t -i -v $(CURDIR):/src/avrbasic -v $(HOME)/.cargo/registry:/root/.cargo/registry -w /src/avrbasic avrbasic /bin/bash

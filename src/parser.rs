@@ -1,3 +1,5 @@
+use exec::{add_var, VarValue};
+
 #[cfg(target_arch = "avr")]
 use core::iter::Peekable;
 #[cfg(not(target_arch = "avr"))]
@@ -89,10 +91,11 @@ impl<'i> Iterator for Splitter<'i> {
             return None;
         }
 
-        let itt = Self::tt(self.v[0]);
+        let itt = Self::tt(self.v[0], None);
 
         let mut len = 0;
-        while len < self.v.len() && self.v[len] != b' ' && Self::tt(self.v[len]) == itt {
+        while len < self.v.len() && self.v[len] != b' ' && Self::tt(self.v[len], Some(&itt)) == itt
+        {
             len += 1;
         }
 
@@ -104,12 +107,19 @@ impl<'i> Iterator for Splitter<'i> {
 }
 
 impl<'i> Splitter<'i> {
-    fn tt(c: u8) -> TokenType {
-        match c {
-            b'0'...b'9' => TokenType::Number,
-            b'A'...b'Z' => TokenType::Label,
-            b'+' | b'-' | b'*' | b'/' | b'%' | b'=' => TokenType::BinOp,
-            _ => panic!(),
+    fn tt(c: u8, s: Option<&TokenType>) -> TokenType {
+        match s {
+            None | Some(&TokenType::Number) | Some(&TokenType::BinOp) => match c {
+                b'0'...b'9' => TokenType::Number,
+                b'A'...b'Z' => TokenType::Label,
+                b'+' | b'-' | b'*' | b'/' | b'%' | b'=' => TokenType::BinOp,
+                c => panic!("got char {:?}", c as char),
+            },
+            Some(&TokenType::Label) => match c {
+                b'0'...b'9' | b'A'...b'Z' | b'!' | b'$' | b'#' | b'%' => TokenType::Label,
+                b'+' | b'-' | b'*' | b'/' | b'=' => TokenType::BinOp,
+                _ => panic!(),
+            },
         }
     }
 
@@ -153,27 +163,38 @@ impl<'i> PSplitter<'i> {
     }
 }
 
-pub fn parse(i: &[u8]) -> Result<Statement, ParseError> {
+pub fn parse(i: &[u8]) -> Result<(), ParseError> {
     let mut s = Splitter { v: i }.psplitter();
 
     if s.check(b"LET")? {
         let (v, tt) = s.0.next().ok_or("missing LET variable")?;
         tt.expect(&TokenType::Label)?;
 
+        match v[v.len() - 1] {
+            b'%' | b'$' => (),
+            _ => return Err(ParseError::Other("expected var type")),
+        }
+
         s.expect(b"=")?;
 
         let r = parse_expr(s)?;
 
-        Ok(Statement::Let(v, r))
+        let vn: [u8; 2] = [v[0], if v.len() > 2 { v[1] } else { 0 }];
+        match (v[v.len() - 1], &r) {
+            (b'%', &VarValue::Integer(..)) | (b'$', &VarValue::String(..)) => add_var(vn, &r),
+            _ => return Err(ParseError::Other("bad return value")),
+        };
+
+        Ok(())
     } else {
         Err(ParseError::UnknownToken(s.0.next().unwrap().0))
     }
 }
 
-fn parse_expr(mut s: PSplitter) -> Result<Expr, ParseError> {
+fn parse_expr(mut s: PSplitter) -> Result<VarValue, ParseError> {
     let (n, tt) = s.0.next().ok_or("missing expr")?;
     tt.expect(&TokenType::Number)?;
-    let n = Expr::Number(parse_number(n)?);
+    let n = VarValue::Integer(parse_number(n)?);
 
     if s.check_end()? {
         return Ok(n);

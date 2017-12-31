@@ -1,4 +1,10 @@
-use display::{flush, format_integer, getline, putch, putstr};
+use display::{flush, format_integer, getline, putch, putstr, Screen};
+use parser::parse;
+
+#[cfg(target_arch = "avr")]
+use core::fmt::Write;
+#[cfg(not(target_arch = "avr"))]
+use std::fmt::Write;
 
 #[cfg(target_arch = "avr")]
 const VHEAP_BASE: u16 = 0x200;
@@ -55,22 +61,14 @@ pub fn run() {
     flush();
 
     loop {
-        let s = getline();
+        let (s, l) = getline();
 
-        let v = get_var([s[0], 0], b'%');
-
-        match v {
-            VarValue::Integer(i) => {
-                putstr(b"value: ");
-                for c in format_integer(i) {
-                    putch(c);
-                }
+        match parse(&s[..l as usize]) {
+            Ok(()) => (),
+            Err(e) => {
+                write!(&mut Screen, "{:?}", e).unwrap();
                 putch(b'\n');
             }
-            VarValue::String(_o, _l) => {
-                // ...
-            }
-            _ => (),
         }
     }
 }
@@ -92,7 +90,7 @@ fn init() {
     }
 }
 
-fn add_var(vn: [u8; 2], val: &VarValue) {
+pub fn add_var(vn: [u8; 2], val: &VarValue) {
     unsafe {
         let mut h = **VHEAP;
 
@@ -135,7 +133,7 @@ fn add_var(vn: [u8; 2], val: &VarValue) {
     }
 }
 
-fn get_var(vn: [u8; 2], t: u8) -> VarValue {
+pub fn get_var(vn: [u8; 2], t: u8) -> VarValue {
     unsafe {
         let mut h = **VHEAP;
 
@@ -180,7 +178,7 @@ fn get_var(vn: [u8; 2], t: u8) -> VarValue {
     }
 }
 
-fn add_str(s: &[u8]) -> (u8, u16) {
+pub fn add_str(s: &[u8]) -> (u8, u16) {
     assert!(s.len() <= 255);
     let mut so: u16 = 0;
 

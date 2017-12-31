@@ -2,6 +2,10 @@
 use core::cell::Cell;
 #[cfg(target_arch = "avr")]
 use synced::Synced;
+#[cfg(target_arch = "avr")]
+use core::fmt;
+#[cfg(not(target_arch = "avr"))]
+use std::fmt;
 
 #[cfg(target_arch = "avr")]
 #[link(name = "u8g2")]
@@ -60,7 +64,7 @@ pub fn getch() -> u8 {
     }
 }
 
-pub fn getline() -> [u8; 128] {
+pub fn getline() -> ([u8; 128], u8) {
     let mut l: [u8; 128] = [0; 128];
     let mut i = 0;
 
@@ -106,7 +110,7 @@ pub fn getline() -> [u8; 128] {
             10 => {
                 putch(b'\n');
                 flush();
-                return l;
+                return (l, i as u8);
             }
             _ => (),
         }
@@ -199,6 +203,16 @@ pub fn flush() {
 pub fn putstr(cs: &[u8]) {
     for &c in cs {
         putch(c);
+    }
+}
+
+pub struct Screen;
+
+impl fmt::Write for Screen {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        putstr(s.as_bytes());
+        flush();
+        Ok(())
     }
 }
 
