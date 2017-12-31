@@ -84,8 +84,11 @@ fn add_var(vn: [u8; 2], val: &VarValue) {
         let mut h = **VHEAP;
 
         loop {
-            // TODO: overwrite
-            if h.read() != 0 {
+            if h.read() != 0 && (h.read() != vn[0] || h.add(1).read() != vn[1] || h.add(2).read() != match *val {
+                VarValue::Integer(..) => 1,
+                VarValue::String(..) => 4,
+                _ => panic!("eh"),
+            }) {
                 let t = h.add(2).read();
                 match t {
                     1 => h = h.add(5),
