@@ -285,5 +285,11 @@ mod tests {
         assert_eq!(get_var([b'X', 0], b'%'), VarValue::Integer(0));
         assert_eq!(interp(b"LET X% = 1 + 2"), Ok(()));
         assert_eq!(get_var([b'X', 0], b'%'), VarValue::Integer(3));
+        assert_eq!(interp(b"LET X% = 1 - 2"), Ok(()));
+        assert_eq!(get_var([b'X', 0], b'%'), VarValue::Integer(-1));
+        assert_eq!(interp(b"LET X% = 1 = 2"), Ok(()));
+        assert_eq!(get_var([b'X', 0], b'%'), VarValue::Integer(0));
+        assert_eq!(interp(b"LET X% = 2 = 2"), Ok(()));
+        assert_eq!(get_var([b'X', 0], b'%'), VarValue::Integer(1));
     }
 }
