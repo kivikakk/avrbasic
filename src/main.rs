@@ -12,6 +12,7 @@ extern crate termios;
 pub mod parser;
 pub mod synced;
 pub mod exec;
+pub mod display;
 
 #[no_mangle]
 #[cfg(target_arch = "avr")]
