@@ -1,4 +1,9 @@
 #[cfg(target_arch = "avr")]
+use core::cell::Cell;
+#[cfg(target_arch = "avr")]
+use synced::Synced;
+
+#[cfg(target_arch = "avr")]
 #[link(name = "u8g2")]
 extern "C" {
     pub fn init_st7920();
@@ -7,6 +12,9 @@ extern "C" {
     fn draw_strn(x: u8, y: u8, str: *mut i8, off: u8, n: u8);
     fn send_display();
 }
+
+#[cfg(target_arch = "avr")]
+static IN_GETCH: Synced<Cell<Option<u8>>> = unsafe { Synced::new(Cell::new(None)) };
 
 pub fn getch() -> u8 {
     #[cfg(target_arch = "avr")]
@@ -17,13 +25,21 @@ pub fn getch() -> u8 {
             ADCSRA.write_volatile(ADCSRA.read_volatile() | ADSC);
             while ADCSRA.read_volatile() & ADSC != 0 {}
 
-            match ADC.read_volatile() {
-                600...620 => return b'A',
-                690...710 => return b'B',
-                845...865 => return b'C',
-                920...940 => return b'D',
-                1005...1025 => return b'E',
-                _ => (),
+            let ch = match ADC.read_volatile() {
+                600...620 => b'A',
+                690...710 => b'B',
+                845...865 => b'C',
+                920...940 => b'D',
+                1005...1025 => b'E',
+                _ => {
+                    IN_GETCH.set(None);
+                    continue;
+                }
+            };
+
+            if IN_GETCH.get() != Some(ch) {
+                IN_GETCH.set(Some(ch));
+                return ch;
             }
         }
     }
@@ -99,9 +115,7 @@ pub fn getline() -> [u8; 128] {
 
 #[cfg(target_arch = "avr")]
 mod avr_display {
-    use core::cell::Cell;
-    use synced::Synced;
-    use super::{draw_strn, prep_display, send_display};
+    use super::{draw_strn, prep_display, send_display, Cell, Synced};
 
     const W: usize = 21;
     const H: usize = 6;
