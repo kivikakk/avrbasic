@@ -207,38 +207,51 @@ pub fn interp(i: &[u8]) -> Result<(), InterpError> {
 fn interp_expr(mut s: PSplitter) -> Result<VarValue, InterpError> {
     let (n, tt) = s.0.next().ok_or("missing expr")?;
 
-    if tt.check(&TokenType::Number) {
-        let n = parse_number(n)?;
+    let n =
+        if tt.check(&TokenType::Number) {
+            VarValue::Integer(parse_number(n)?)
+        } else if tt.check(&TokenType::String) {
+            let n = &n[1..n.len() - 1];
+            let s = BoxedString::new(n);
+            VarValue::String(s)
+        } else {
+            return Err(InterpError::BadTokenType(tt));
+        };
 
-        if s.check_end()? {
-            return Ok(VarValue::Integer(n));
-        }
+    if s.check_end()? {
+        return Ok(n);
+    }
 
-        let (op, tt) = s.0.next().ok_or("missing op")?;
-        tt.expect(&TokenType::BinOp)?;
-        let op = parse_binop(op)?;
+    let (op, tt) = s.0.next().ok_or("missing op")?;
+    tt.expect(&TokenType::BinOp)?;
+    let op = parse_binop(op)?;
 
-        let n2 = interp_expr(s)?;
+    let n2 = interp_expr(s)?;
 
-        match n2 {
-            VarValue::Integer(n2) => Ok(VarValue::Integer(match op {
-                BinOp::Add => n + n2,
-                BinOp::Subtract => n - n2,
-                BinOp::Equal => if n == n2 {
-                    1
+    match (n, n2) {
+        (VarValue::Integer(n), VarValue::Integer(n2)) => Ok(VarValue::Integer(match op {
+            BinOp::Add => n + n2,
+            BinOp::Subtract => n - n2,
+            BinOp::Equal => if n == n2 {
+                1
+            } else {
+                0
+            },
+        })),
+        (VarValue::String(ref s1), VarValue::String(ref s2)) => {
+            match op {
+                BinOp::Add => Ok(VarValue::String(BoxedString::from_multiple(&[s1.value(), s2.value()]))),
+                BinOp::Equal => Ok(VarValue::Integer(if s1.value() == s2.value() {
+                    1 
                 } else {
                     0
-                },
-            })),
-            _ => Err("bad add".into()),
+                })),
+                BinOp::Subtract => Err("cannot subtract strings".into()),
+            }
         }
-    } else if tt.check(&TokenType::String) {
-        let n = &n[1..n.len() - 1];
-        let s = BoxedString::new(n);
-        Ok(VarValue::String(s))
-    } else {
-        Err(InterpError::BadTokenType(tt))
+        _ => Err("bad binop".into()),
     }
+
 }
 
 fn parse_number(mut s: &[u8]) -> Result<i16, InterpError> {

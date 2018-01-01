@@ -194,9 +194,16 @@ pub struct BoxedString {
 
 impl BoxedString {
     pub fn new(s: &[u8]) -> BoxedString {
-        if s.len() > 255 {
+        Self::from_multiple(&[s])
+    }
+
+    pub fn from_multiple(ss: &[&[u8]]) -> BoxedString {
+        let len: usize = ss.iter().map(|s| s.len()).sum();
+        if len > 255 {
             panic!("string too large");
         }
+
+        let len = len as u8;
 
         unsafe {
             let mut sheap = **SHEAP;
@@ -212,16 +219,21 @@ impl BoxedString {
                     continue;
                 }
 
-                if SHEAP.offset_to(sheap.add(s.len() + 1)).unwrap() > SHEAP_SIZE as isize {
+                if SHEAP.offset_to(sheap.add(len as usize + 1)).unwrap() > SHEAP_SIZE as isize {
                     panic!("string heap too large");
                 }
 
-                sheap.write(s.len() as u8);
-                sheap
-                    .add(1)
-                    .copy_from_nonoverlapping(s as *const _ as *const u8, s.len());
+                sheap.write(len as u8);
+                let mut off = 1;
+                for s in ss {
+                    sheap
+                        .add(off)
+                        .copy_from_nonoverlapping(s as *const _ as *const u8, s.len());
+                    off += s.len();
+                }
+
                 return BoxedString {
-                    len: s.len() as u8,
+                    len: len,
                     sheap_offset: SHEAP.offset_to(sheap).unwrap() as u16,
                 };
             }
