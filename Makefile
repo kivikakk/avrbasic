@@ -1,10 +1,26 @@
-TARGET = target/avr-atmega328p/release/avrbasic.elf
+TARGET = avrbasic.elf
+firm_src = ${wildcard at*${target}.c}
+firm_obj = ${firm_src:.c=.o}
+add_src = ${wildcard u8g2*.c} ${wildcard u8x8*.c}
+add_obj = ${add_src:.c=.o}
 
-test:
-	RUST_TEST_THREADS=1 cargo test
+IPATH = .
+IPATH += /usr/local/include/simavr
 
-all:
-	./build.sh
+include Makefile.common
+
+all: $(TARGET)
+
+$(TARGET): ${firm_obj} ${add_obj}
+	avr-gcc -Wall -gdwarf-2 -Os -std=gnu99 \
+			-mmcu=atmega328 \
+			-DF_CPU=8000000 \
+			-fno-inline-small-functions \
+			-ffunction-sections -fdata-sections \
+			-Wl,--relax,--gc-sections \
+			-Wl,--undefined=_mmcu,--section-start=.mmcu=0x910000 \
+			${CPPFLAGS} \
+			$^ -o $@
 
 dump: all
 	avr-objdump -d $(TARGET)
@@ -19,6 +35,5 @@ flash: all
 	avr-objcopy -j .text -j .data -j .eeprom -O ihex $(TARGET) $(TARGET:.elf=.hex)
 	avrdude -c usbtiny -p atmega328p -U flash:w:$(TARGET:.elf=.hex) -B 1
 
-docker:
-	docker build -t avrbasic  $(CURDIR)
-	docker run --privileged -t -i -v $(CURDIR):/src/avrbasic -v $(HOME)/.cargo/registry:/root/.cargo/registry -w /src/avrbasic avrbasic /bin/bash
+clean:
+	rm -rf *.a *.axf *.o
