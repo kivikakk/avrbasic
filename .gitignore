@@ -1,5 +1,3 @@
-/target/
-**/*.rs.bk
-Cargo.lock
-libu8g2.a
 *.o
+*.elf
+*.hex
