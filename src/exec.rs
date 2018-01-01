@@ -75,6 +75,8 @@ pub fn run() {
                 putch(b'\n');
             }
         }
+
+        BoxedString::gc_heap();
     }
 }
 
@@ -256,19 +258,15 @@ impl BoxedString {
     pub fn into_varvalue(self) -> VarValue {
         VarValue::String(self)
     }
+
+    pub fn gc_heap() {
+        // TODO
+    }
 }
 
 impl Clone for BoxedString {
     fn clone(&self) -> BoxedString {
         BoxedString::new(self.value())
-    }
-}
-
-impl Drop for BoxedString {
-    fn drop(&mut self) {
-        // TODO:
-        // defragment heap? (what about BoxedStrings not in VHEAP/only on stack?)
-        // mark space as unused? (will be fragmented)
     }
 }
 
