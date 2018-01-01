@@ -228,7 +228,7 @@ impl BoxedString {
                 for s in ss {
                     sheap
                         .add(off)
-                        .copy_from_nonoverlapping(s as *const _ as *const u8, s.len());
+                        .copy_from_nonoverlapping(*s as *const [u8] as *const u8, s.len());
                     off += s.len();
                 }
 
