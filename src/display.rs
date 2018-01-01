@@ -14,6 +14,7 @@ extern "C" {
     fn prep_display();
     // fn draw_str(x: u8, y: u8, str: *const i8);
     fn draw_strn(x: u8, y: u8, str: *mut i8, off: u8, n: u8);
+    fn draw_cursor(x: u8, y: u8);
     fn send_display();
 }
 
@@ -33,8 +34,8 @@ pub fn getch() -> u8 {
                 600...620 => b'A',
                 690...710 => b'B',
                 845...865 => b'C',
-                920...940 => b'D',
-                1005...1025 => b'E',
+                920...940 => 127,
+                1005...1025 => 10,
                 _ => {
                     IN_GETCH.set(None);
                     continue;
@@ -120,59 +121,51 @@ pub fn getline() -> ([u8; 128], u8) {
 
 #[cfg(target_arch = "avr")]
 mod avr_display {
-    use super::{draw_strn, prep_display, send_display, Cell, Synced};
+    use super::{draw_strn, prep_display, send_display, draw_cursor};
 
     const W: usize = 21;
     const H: usize = 6;
-    static X: Synced<Cell<u8>> = unsafe { Synced::new(Cell::new(0)) };
-    static Y: Synced<Cell<u8>> = unsafe { Synced::new(Cell::new(0)) };
-    static LINES: Synced<Cell<[u8; W * H]>> = unsafe { Synced::new(Cell::new([0; W * H])) };
+    static mut X: u8 = 0;
+    static mut Y: u8 = 0;
+    static mut LINES: [u8; W * H] = [0; W * H];
 
     pub fn putch(c: u8) {
-        let mut lines = LINES.get();
-        let x = X.get();
-        let y = Y.get();
+        unsafe {
+            let arr: *mut u8 = &mut LINES as *const _ as *mut _;
 
-        let arr: *mut u8 = &mut lines as *const _ as *mut _;
-
-        if c == 8 {
-            if x > 0 {
-                X.set(x - 1);
-            }
-        } else if c == 10 {
-            if y < 5 {
-                Y.set(y + 1);
-                X.set(0);
-            } else {
-                unsafe {
+            if c == 8 {
+                if X > 0 {
+                    X -= 1;
+                }
+            } else if c == 10 {
+                if Y < 5 {
+                    Y += 1;
+                    X = 0;
+                } else {
                     for i in 0..(H - 1) {
                         arr.add(i as usize * W)
                             .copy_from_nonoverlapping(arr.add((i + 1) as usize * W), W);
                     }
                     arr.add((H - 1) * W).write_bytes(0, W);
+                    X = 0;
                 }
-                X.set(0);
+            } else {
+                arr.add((Y as usize * W) + X as usize).write(c);
+                X += 1;
             }
-        } else {
-            unsafe {
-                arr.add((y as usize * W) + x as usize).write(c);
-            }
-            X.set(x + 1);
         }
-
-        LINES.set(lines);
     }
 
     pub fn draw() {
         unsafe {
-            let mut lines = LINES.get();
-            let arr: *mut u8 = &mut lines as *const _ as *mut _;
+            let arr: *mut u8 = &mut LINES as *const _ as *mut _;
 
             prep_display();
             for y in 0..H {
                 let offset = (y * W) as usize;
                 draw_strn(0, y as u8, arr as *mut i8, offset as u8, W as u8);
             }
+            draw_cursor(X, Y);
             send_display();
         }
     }
