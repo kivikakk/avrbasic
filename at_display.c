@@ -24,7 +24,7 @@ void init_display(void) {
   ADCSRA |= (1 << ADPS1) | (1 << ADPS0);
   ADCSRA |= (1 << ADEN);
 
-  u8g2_Setup_st7920_s_128x64_f(&u8g2, U8G2_R0, u8x8_byte_8bit_8080mode, u8x8_gpio_and_delay);
+  u8g2_Setup_st7920_p_128x64_f(&u8g2, U8G2_R0, u8x8_byte_8bit_8080mode, u8x8_gpio_and_delay);
   u8g2_InitDisplay(&u8g2);
   u8g2_SetPowerSave(&u8g2, 0);
 
