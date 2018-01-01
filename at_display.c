@@ -247,6 +247,20 @@ int getline(char line[GETLINE_LEN]) {
   while (1) {
     char c = getch();
 
+    if (c == 'A') {
+      putstr("LET A%=2\n");
+      flush();
+      memcpy(line, "LET A%=2", 8);
+      return 8;
+    }
+
+    if (c == 'B') {
+      putstr("PRINT A%+A%\n");
+      flush();
+      memcpy(line, "PRINT A%+A%", 11);
+      return 11;
+    }
+
     if ((c >= 'A' && c <= 'Z') ||
         (c >= '0' && c <= '9') ||
         c == ' ' ||
