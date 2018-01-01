@@ -1,4 +1,4 @@
-use exec::{add_str, add_var, VarValue};
+use exec::{add_var, BoxedString, VarValue};
 
 #[cfg(target_arch = "avr")]
 use core::iter::Peekable;
@@ -96,11 +96,16 @@ impl<'i> Iterator for Splitter<'i> {
             return None;
         }
 
-        let itt = Self::tt(self.v[0], None);
+        let itt = match Self::tt(self.v[0], None) {
+            Ok(tt) => tt,
+            Err(_) => return None,
+        };
 
         let mut len = 0;
-        while len < self.v.len() && self.v[len] != b' ' && Self::tt(self.v[len], Some(&itt)) == itt
-        {
+        while len < self.v.len() && self.v[len] != b' ' && match Self::tt(self.v[len], Some(&itt)) {
+            Ok(tt) => tt == itt,
+            Err(_) => false,
+        } {
             len += 1;
         }
 
@@ -112,28 +117,22 @@ impl<'i> Iterator for Splitter<'i> {
 }
 
 impl<'i> Splitter<'i> {
-    fn tt(c: u8, s: Option<&TokenType>) -> TokenType {
+    fn tt(c: u8, s: Option<&TokenType>) -> Result<TokenType, InterpError> {
         #[cfg_attr(target_arch = "avr", allow(unused_variables))]
         match s {
             None | Some(&TokenType::Number) | Some(&TokenType::BinOp) => match c {
-                b'0'...b'9' => TokenType::Number,
-                b'A'...b'Z' => TokenType::Label,
-                b'+' | b'-' | b'*' | b'/' | b'%' | b'=' => TokenType::BinOp,
-                b'"' => TokenType::String,
-
-                c => {
-                    #[cfg(not(target_arch = "avr"))]
-                    panic!("got char {:?}", c as char);
-                    #[cfg(target_arch = "avr")]
-                    panic!();
-                }
+                b'0'...b'9' => Ok(TokenType::Number),
+                b'A'...b'Z' => Ok(TokenType::Label),
+                b'+' | b'-' | b'*' | b'/' | b'%' | b'=' => Ok(TokenType::BinOp),
+                b'"' => Ok(TokenType::String),
+                _ => Err("got bad char".into()),
             },
             Some(&TokenType::Label) => match c {
-                b'0'...b'9' | b'A'...b'Z' | b'!' | b'$' | b'#' | b'%' => TokenType::Label,
-                b'+' | b'-' | b'*' | b'/' | b'=' => TokenType::BinOp,
-                _ => panic!(),
+                b'0'...b'9' | b'A'...b'Z' | b'!' | b'$' | b'#' | b'%' => Ok(TokenType::Label),
+                b'+' | b'-' | b'*' | b'/' | b'=' => Ok(TokenType::BinOp),
+                _ => Err("got bad char in label".into()),
             },
-            Some(&TokenType::String) => TokenType::String,
+            Some(&TokenType::String) => Ok(TokenType::String),
         }
     }
 
@@ -235,8 +234,8 @@ fn interp_expr(mut s: PSplitter) -> Result<VarValue, InterpError> {
         }
     } else if tt.check(&TokenType::String) {
         let n = &n[1..n.len() - 1];
-        let (len, o) = add_str(n);
-        Ok(VarValue::String(len, o))
+        let s = BoxedString::new(n);
+        Ok(VarValue::String(s))
     } else {
         Err(InterpError::BadTokenType(tt))
     }
@@ -284,35 +283,41 @@ fn parse_binop(s: &[u8]) -> Result<BinOp, InterpError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use exec::{clear_vars, get_str, get_var};
+    use exec::{clear_vars, get_var};
 
     #[test]
     fn interp_let() {
         clear_vars();
-        assert_eq!(get_var([b'X', 0], b'%'), VarValue::Integer(0));
+        assert_eq!(get_var([b'X', 0], b'%'), None);
         assert_eq!(interp(b"LET X% = 1"), Ok(()));
-        assert_eq!(get_var([b'X', 0], b'%'), VarValue::Integer(1));
+        assert_eq!(get_var([b'X', 0], b'%'), Some(VarValue::Integer(1)));
         assert_eq!(interp(b"LET X$ = \"ROBOT\""), Ok(()));
-        assert_eq!(get_var([b'X', 0], b'$'), VarValue::String(5, 0));
-        assert_eq!(get_str(0, 5), b"ROBOT");
+        let v = get_var([b'X', 0], b'$');
+        match v {
+            Some(VarValue::String(ref bs)) => assert_eq!(bs.value(), b"ROBOT"),
+            _ => panic!("no string"),
+        }
     }
 
     #[test]
     fn interp_binop() {
         clear_vars();
-        assert_eq!(get_var([b'X', 0], b'%'), VarValue::Integer(0));
+        assert_eq!(get_var([b'X', 0], b'%'), None);
         assert_eq!(interp(b"LET X% = 1 + 2"), Ok(()));
-        assert_eq!(get_var([b'X', 0], b'%'), VarValue::Integer(3));
+        assert_eq!(get_var([b'X', 0], b'%'), Some(VarValue::Integer(3)));
         assert_eq!(interp(b"LET X% = 1 - 2"), Ok(()));
-        assert_eq!(get_var([b'X', 0], b'%'), VarValue::Integer(-1));
+        assert_eq!(get_var([b'X', 0], b'%'), Some(VarValue::Integer(-1)));
         assert_eq!(interp(b"LET X% = 1 = 2"), Ok(()));
-        assert_eq!(get_var([b'X', 0], b'%'), VarValue::Integer(0));
+        assert_eq!(get_var([b'X', 0], b'%'), Some(VarValue::Integer(0)));
         assert_eq!(interp(b"LET X% = 2 = 2"), Ok(()));
-        assert_eq!(get_var([b'X', 0], b'%'), VarValue::Integer(1));
+        assert_eq!(get_var([b'X', 0], b'%'), Some(VarValue::Integer(1)));
 
-        assert_eq!(get_var([b'X', 0], b'$'), VarValue::String(0, 0));
+        assert_eq!(get_var([b'X', 0], b'$'), None);
         assert_eq!(interp(b"LET X$ = \"ROB\" + \"OTS\""), Ok(()));
-        assert_eq!(get_var([b'X', 0], b'$'), VarValue::String(6, 0));
-        assert_eq!(get_str(0, 6), b"ROBOTS");
+        let v = get_var([b'X', 0], b'$');
+        match v {
+            Some(VarValue::String(ref bs)) => assert_eq!(bs.value(), b"ROBOTS"),
+            _ => panic!("no string"),
+        }
     }
 }

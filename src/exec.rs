@@ -1,10 +1,15 @@
-use display::{flush, format_integer, getline, putch, putstr, Screen};
+use display::{flush, getline, putch, putstr, Screen};
 use interp::interp;
 
 #[cfg(target_arch = "avr")]
 use core::fmt::Write;
 #[cfg(not(target_arch = "avr"))]
 use std::fmt::Write;
+
+#[cfg(target_arch = "avr")]
+use core::slice;
+#[cfg(not(target_arch = "avr"))]
+use std::slice;
 
 #[cfg(target_arch = "avr")]
 const VHEAP_BASE: u16 = 0x200;
@@ -46,10 +51,10 @@ use self::heaps::{SHEAP, VHEAP};
 
 #[derive(Debug, PartialEq)]
 pub enum VarValue {
-    Integer(i16),    // %
-    Single(f32),     // !
-    Double(f64),     // #
-    String(u8, u16), // $
+    Integer(i16),        // %
+    Single(f32),         // !
+    Double(f64),         // #
+    String(BoxedString), // $
 }
 
 pub type Var = ([u8; 2], VarValue);
@@ -105,7 +110,7 @@ pub fn add_var(vn: [u8; 2], val: &VarValue) {
                 let t = h.add(2).read();
                 match t {
                     1 => h = h.add(5),
-                    4 => h = h.add(6),
+                    4 => h = h.add(5),
                     _ => unreachable!(),
                 }
                 continue;
@@ -119,11 +124,10 @@ pub fn add_var(vn: [u8; 2], val: &VarValue) {
                     h.add(3).write((i & 0xFF) as u8);
                     h.add(4).write(((i >> 8) & 0xFF) as u8);
                 }
-                VarValue::String(l, o) => {
+                VarValue::String(ref bs) => {
                     h.add(2).write(4);
-                    h.add(3).write(l);
-                    h.add(4).write(o as u8);
-                    h.add(5).write(((o >> 8) & 0xFF) as u8);
+                    h.add(3).write(bs.sheap_offset as u8);
+                    h.add(4).write(((bs.sheap_offset >> 8) & 0xFF) as u8);
                 }
                 _ => unreachable!(),
             }
@@ -133,7 +137,7 @@ pub fn add_var(vn: [u8; 2], val: &VarValue) {
     }
 }
 
-pub fn get_var(vn: [u8; 2], t: u8) -> VarValue {
+pub fn get_var(vn: [u8; 2], t: u8) -> Option<VarValue> {
     unsafe {
         let mut h = **VHEAP;
 
@@ -148,13 +152,16 @@ pub fn get_var(vn: [u8; 2], t: u8) -> VarValue {
                         1 => if t == b'%' {
                             let b = h.add(3).read();
                             let a = h.add(4).read();
-                            return VarValue::Integer((u16::from(a) << 8 | u16::from(b)) as i16);
+                            return Some(VarValue::Integer(
+                                (u16::from(a) << 8 | u16::from(b)) as i16,
+                            ));
                         },
                         4 => if t == b'$' {
-                            let off = h.add(3).read();
-                            let b = h.add(4).read();
-                            let a = h.add(5).read();
-                            return VarValue::String(off, ((u16::from(a) << 8) | u16::from(b)));
+                            let b = h.add(3).read();
+                            let a = h.add(4).read();
+                            return Some(VarValue::String(BoxedString::from_offset(
+                                ((u16::from(a) << 8) | u16::from(b)),
+                            )));
                         },
                         _ => unreachable!(),
                     }
@@ -163,69 +170,91 @@ pub fn get_var(vn: [u8; 2], t: u8) -> VarValue {
 
             match h.add(2).read() {
                 1 => h = h.add(5),
-                4 => h = h.add(6),
+                4 => h = h.add(5),
                 _ => unreachable!(),
             }
         }
 
-        match t {
-            b'%' => VarValue::Integer(0),
-            b'!' => VarValue::Single(0.0),
-            b'#' => VarValue::Double(0.0),
-            b'$' => VarValue::String(0, 0),
-            _ => unreachable!(),
-        }
+        None
     }
-}
-
-pub fn get_str(len: u8, off: u16) -> &'static [u8] {
-    &[]
 }
 
 pub fn clear_vars() {
     unsafe {
         VHEAP.write(0);
+        SHEAP.write(0);
     }
 }
 
-pub fn add_str(s: &[u8]) -> (u8, u16) {
-    assert!(s.len() <= 255);
-    let mut so: u16 = 0;
+#[derive(Debug, PartialEq)]
+pub struct BoxedString {
+    len: u8,
+    sheap_offset: u16,
+}
 
-    unsafe {
-        let mut h = **VHEAP;
+impl BoxedString {
+    pub fn new(s: &[u8]) -> BoxedString {
+        if s.len() > 255 {
+            panic!("string too large");
+        }
 
-        loop {
-            if h.read() == 0 {
-                break;
-            }
+        unsafe {
+            let mut sheap = **SHEAP;
 
-            match h.add(2).read() {
-                1 => h = h.add(5),
-                4 => {
-                    let off = h.add(3).read();
-                    let b = h.add(4).read();
-                    let a = h.add(5).read();
-                    let len = (u16::from(a) << 8) | u16::from(b);
-                    let latest: u16 = u16::from(off) + len;
-                    if latest > so {
-                        so = latest as u16;
-                    }
-                    h = h.add(6);
+            loop {
+                if SHEAP.offset_to(sheap).unwrap() >= SHEAP_SIZE as isize {
+                    panic!("string heap too large");
                 }
-                _ => unreachable!(),
+
+                let b = sheap.read();
+                if b > 0 {
+                    sheap = sheap.add(b as usize + 1);
+                    continue;
+                }
+
+                if SHEAP.offset_to(sheap.add(s.len() + 1)).unwrap() > SHEAP_SIZE as isize {
+                    panic!("string heap too large");
+                }
+
+                sheap.write(s.len() as u8);
+                sheap
+                    .add(1)
+                    .copy_from_nonoverlapping(s as *const _ as *const u8, s.len());
+                return BoxedString {
+                    len: s.len() as u8,
+                    sheap_offset: SHEAP.offset_to(sheap).unwrap() as u16,
+                };
             }
         }
+    }
 
-        if so as usize + s.len() >= SHEAP_SIZE as usize {
-            panic!("string heap too large");
+    pub fn from_offset(sheap_offset: u16) -> BoxedString {
+        BoxedString {
+            len: unsafe { SHEAP.add(sheap_offset as usize).read() },
+            sheap_offset: sheap_offset,
         }
+    }
 
-        SHEAP
-            .add(so as usize)
-            .copy_from_nonoverlapping(s as *const [u8] as *const u8, s.len());
+    pub fn value(&self) -> &'static [u8] {
+        unsafe {
+            slice::from_raw_parts(SHEAP.add(self.sheap_offset as usize + 1), self.len as usize)
+        }
+    }
 
-        (s.len() as u8, so)
+    pub fn into_varvalue(self) -> VarValue {
+        VarValue::String(self)
+    }
+}
+
+impl Clone for BoxedString {
+    fn clone(&self) -> BoxedString {
+        BoxedString::new(self.value())
+    }
+}
+
+impl Drop for BoxedString {
+    fn drop(&mut self) {
+        // TODO
     }
 }
 
@@ -238,21 +267,36 @@ mod tests {
         clear_vars();
 
         add_var([b'A', 0], &VarValue::Integer(105));
-        assert_eq!(get_var([b'A', 0], b'%'), VarValue::Integer(105));
-        assert_eq!(get_var([b'A', 0], b'$'), VarValue::String(0, 0));
+        assert_eq!(get_var([b'A', 0], b'%'), Some(VarValue::Integer(105)));
+        assert_eq!(get_var([b'A', 0], b'$'), None);
 
-        let (len, o) = add_str(b"HELLO");
-        assert_eq!(o, 0);
-        assert_eq!(len, 5);
-        add_var([b'A', 0], &VarValue::String(len, o));
-        assert_eq!(get_var([b'A', 0], b'%'), VarValue::Integer(105));
-        assert_eq!(get_var([b'A', 0], b'$'), VarValue::String(len, o));
+        let s = BoxedString::new(b"HELLO");
+        let len = s.len;
+        let sheap_offset = s.sheap_offset;
+        assert_eq!(s.value(), b"HELLO");
+        add_var([b'A', 0], &s.into_varvalue());
+        assert_eq!(get_var([b'A', 0], b'%'), Some(VarValue::Integer(105)));
+        match get_var([b'A', 0], b'$') {
+            Some(VarValue::String(ref bs)) => {
+                assert_eq!(bs.len, len);
+                assert_eq!(bs.sheap_offset, sheap_offset);
+            }
+            _ => panic!("no string"),
+        }
 
-        let (len, o) = add_str(b"HI");
-        assert_eq!(o, 5);
-        assert_eq!(len, 2);
-        add_var([b'A', 0], &VarValue::String(len, o));
-        assert_eq!(get_var([b'A', 0], b'%'), VarValue::Integer(105));
-        assert_eq!(get_var([b'A', 0], b'$'), VarValue::String(len, o));
+        let s = BoxedString::new(b"HI");
+        let len = s.len;
+        let sheap_offset = s.sheap_offset;
+        assert_eq!(s.value(), b"HI");
+        add_var([b'A', 0], &s.into_varvalue());
+        assert_eq!(get_var([b'A', 0], b'%'), Some(VarValue::Integer(105)));
+        let v = get_var([b'A', 0], b'$');
+        match v {
+            Some(VarValue::String(ref bs)) => {
+                assert_eq!(bs.len, len);
+                assert_eq!(bs.sheap_offset, sheap_offset);
+            }
+            _ => panic!("no string"),
+        }
     }
 }
