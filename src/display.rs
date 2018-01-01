@@ -121,7 +121,7 @@ pub fn getline() -> ([u8; 128], u8) {
 
 #[cfg(target_arch = "avr")]
 mod avr_display {
-    use super::{draw_strn, prep_display, send_display, draw_cursor};
+    use super::{draw_cursor, draw_strn, prep_display, send_display};
 
     const W: usize = 21;
     const H: usize = 6;

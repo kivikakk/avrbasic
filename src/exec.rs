@@ -71,7 +71,7 @@ pub fn run() {
         match interp(&s[..l as usize]) {
             Ok(()) => (),
             Err(e) => {
-                write!(&mut Screen, "{:?}", e).unwrap();
+                // write!(&mut Screen, "{:?}", e).unwrap();
                 putch(b'\n');
             }
         }

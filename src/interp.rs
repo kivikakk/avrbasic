@@ -207,16 +207,15 @@ pub fn interp(i: &[u8]) -> Result<(), InterpError> {
 fn interp_expr(mut s: PSplitter) -> Result<VarValue, InterpError> {
     let (n, tt) = s.0.next().ok_or("missing expr")?;
 
-    let n =
-        if tt.check(&TokenType::Number) {
-            VarValue::Integer(parse_number(n)?)
-        } else if tt.check(&TokenType::String) {
-            let n = &n[1..n.len() - 1];
-            let s = BoxedString::new(n);
-            VarValue::String(s)
-        } else {
-            return Err(InterpError::BadTokenType(tt));
-        };
+    let n = if tt.check(&TokenType::Number) {
+        VarValue::Integer(parse_number(n)?)
+    } else if tt.check(&TokenType::String) {
+        let n = &n[1..n.len() - 1];
+        let s = BoxedString::new(n);
+        VarValue::String(s)
+    } else {
+        return Err(InterpError::BadTokenType(tt));
+    };
 
     if s.check_end()? {
         return Ok(n);
@@ -238,20 +237,20 @@ fn interp_expr(mut s: PSplitter) -> Result<VarValue, InterpError> {
                 0
             },
         })),
-        (VarValue::String(ref s1), VarValue::String(ref s2)) => {
-            match op {
-                BinOp::Add => Ok(VarValue::String(BoxedString::from_multiple(&[s1.value(), s2.value()]))),
-                BinOp::Equal => Ok(VarValue::Integer(if s1.value() == s2.value() {
-                    1 
-                } else {
-                    0
-                })),
-                BinOp::Subtract => Err("cannot subtract strings".into()),
-            }
-        }
+        (VarValue::String(ref s1), VarValue::String(ref s2)) => match op {
+            BinOp::Add => Ok(VarValue::String(BoxedString::from_multiple(&[
+                s1.value(),
+                s2.value(),
+            ]))),
+            BinOp::Equal => Ok(VarValue::Integer(if s1.value() == s2.value() {
+                1
+            } else {
+                0
+            })),
+            BinOp::Subtract => Err("cannot subtract strings".into()),
+        },
         _ => Err("bad binop".into()),
     }
-
 }
 
 fn parse_number(mut s: &[u8]) -> Result<i16, InterpError> {
