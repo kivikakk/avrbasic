@@ -20,13 +20,19 @@ int main(void)
 {
   init_display();
 
-  char line[GETLINE_LEN];
+  char line[GETLINE_LEN + 1];
 
   putstr("AVR-BASIC\n");
   flush();
 
   while (1) {
-    getline(line);
+    putstr(">");
+    flush();
+    int l = getline(line);
+    line[l] = 0;
+    putstr(line);
+    putch('\n');
+    flush();
   }
 
   return 0;
