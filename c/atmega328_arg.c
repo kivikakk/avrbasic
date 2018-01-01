@@ -132,7 +132,7 @@ void prep_display(void)
 
 void draw_str(unsigned char x, unsigned char y, char const *str)
 {
-  u8g2_DrawStr(&u8g2, x * 7, y * 8 + 7, str);
+  u8g2_DrawStr(&u8g2, x * 6, y * 8 + 7, str);
 }
 
 void draw_strn(unsigned char x, unsigned char y, char *str, unsigned char off, unsigned char n)
@@ -142,6 +142,11 @@ void draw_strn(unsigned char x, unsigned char y, char *str, unsigned char off, u
   str[n] = 0;
   draw_str(x, y, str);
   str[n] = c;
+}
+
+void draw_cursor(unsigned char x, unsigned char y)
+{
+  u8g2_DrawBox(&u8g2, x * 6, y * 8, 6, 8);
 }
 
 void send_display(void)
