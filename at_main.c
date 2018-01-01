@@ -8,6 +8,7 @@
 
 #include "at_main.h"
 #include "at_display.h"
+#include "at_exec.h"
 #include "u8g2.h"
 
 // for linker, emulator, and programmer's sake
@@ -31,7 +32,7 @@ int main(void)
     int l = getline(line);
     line[l] = 0;
 
-    
+    exec(line);
   }
 
   return 0;
