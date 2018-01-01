@@ -1,19 +1,61 @@
 #define __DELAY_BACKWARD_COMPATIBLE__
 
-#include <avr/io.h>
-#include <avr/interrupt.h>
-#include <util/delay.h>
-#include <avr/sleep.h>
-#include <string.h>
-
-#include "atmega328_arg.h"
+#include "at_main.h"
+#include "at_display.h"
 #include "u8g2.h"
 
-// for linker, emulator, and programmer's sake
-#include <avr/avr_mcu_section.h>
-AVR_MCU(F_CPU, "atmega328");
+u8g2_t u8g2;
 
-uint8_t u8x8_gpio_and_delay(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr)
+const int W = 21;
+const int H = 6;
+
+static uint8_t u8x8_gpio_and_delay(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr);
+
+void init_display(void) {
+  DDRB = (1 << PB0);
+  DDRD = (1 << PD5) | (1 << PD6) | (1 << PD7);
+
+  ADMUX |= (1 << REFS0);
+  ADCSRA |= (1 << ADPS1) | (1 << ADPS0);
+  ADCSRA |= (1 << ADEN);
+
+  u8g2_Setup_st7920_s_128x64_f(&u8g2, U8G2_R0, u8x8_byte_4wire_sw_spi, u8x8_gpio_and_delay);
+  u8g2_InitDisplay(&u8g2);
+  u8g2_SetPowerSave(&u8g2, 0);
+}
+
+char getch(void)
+{
+  static char x = 0;
+
+  while (1) {
+    ADCSRA |= (1 << ADSC);
+    while (ADCSRA & (1 << ADSC)) {}
+    int r = ADC;
+
+    char c = 0;
+    if (r >= 600 && r <= 620) {
+      c = 'A';
+    } else if (r >= 690 && r <= 710) {
+      c = 'B';
+    } else if (r >= 845 && r <= 865) {
+      c = 'C';
+    } else if (r >= 920 && r <= 940) {
+      c = '\n';
+    } else if (r >= 1005 && r <= 1025) {
+      c = 8;
+    } else {
+      x = 0;
+    }
+
+    if (c && c != x) {
+      x = c;
+      return c;
+    }
+  }
+}
+
+static uint8_t u8x8_gpio_and_delay(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr)
 {
   switch(msg)
   {
@@ -104,52 +146,4 @@ uint8_t u8x8_gpio_and_delay(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *ar
       break;
   }
   return 1;
-}
-
-static u8g2_t u8g2;
-
-void prep_display(void);
-void draw_str(unsigned char x, unsigned char y, char const *str);
-void send_display(void);
-
-void init_st7920(void)
-{
-  DDRB = (1 << PB0);
-  DDRD = (1 << PD5) | (1 << PD6) | (1 << PD7);
-
-  u8g2_Setup_st7920_s_128x64_f(&u8g2, U8G2_R0, u8x8_byte_4wire_sw_spi, u8x8_gpio_and_delay);
-  u8g2_InitDisplay(&u8g2);
-  u8g2_SetPowerSave(&u8g2, 0);
-}
-
-void prep_display(void)
-{
-  u8g2_ClearBuffer(&u8g2);
-  u8g2_SetFont(&u8g2, u8g2_font_profont11_tr);
-  u8g2_SetDrawColor(&u8g2, 2);
-  u8g2_SetFontMode(&u8g2, 1);
-}
-
-void draw_str(unsigned char x, unsigned char y, char const *str)
-{
-  u8g2_DrawStr(&u8g2, x * 6, y * 8 + 7, str);
-}
-
-void draw_strn(unsigned char x, unsigned char y, char *str, unsigned char off, unsigned char n)
-{
-  str = str + off;
-  char c = str[n];
-  str[n] = 0;
-  draw_str(x, y, str);
-  str[n] = c;
-}
-
-void draw_cursor(unsigned char x, unsigned char y)
-{
-  u8g2_DrawBox(&u8g2, x * 6, y * 8, 6, 8);
-}
-
-void send_display(void)
-{
-  u8g2_SendBuffer(&u8g2);
 }

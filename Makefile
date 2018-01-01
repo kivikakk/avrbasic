@@ -1,5 +1,5 @@
 TARGET = avrbasic.elf
-firm_src = ${wildcard at*${target}.c}
+firm_src = ${wildcard at_*.c}
 firm_obj = ${firm_src:.c=.o}
 add_src = ${wildcard u8g2*.c} ${wildcard u8x8*.c}
 add_obj = ${add_src:.c=.o}
