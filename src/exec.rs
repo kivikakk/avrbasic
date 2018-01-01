@@ -254,7 +254,9 @@ impl Clone for BoxedString {
 
 impl Drop for BoxedString {
     fn drop(&mut self) {
-        // TODO
+        // TODO:
+        // defragment heap? (what about BoxedStrings not in VHEAP/only on stack?)
+        // mark space as unused? (will be fragmented)
     }
 }
 
