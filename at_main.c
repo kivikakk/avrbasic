@@ -30,9 +30,8 @@ int main(void)
     flush();
     int l = getline(line);
     line[l] = 0;
-    putstr(line);
-    putch('\n');
-    flush();
+
+    
   }
 
   return 0;
