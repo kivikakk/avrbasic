@@ -4,10 +4,15 @@
 #include "at_display.h"
 #include "u8g2.h"
 
+#include <string.h>
+
 u8g2_t u8g2;
 
-const int W = 21;
-const int H = 6;
+#define W 21
+#define H 6
+static char DISPLAY[W * H];
+static int X = 0;
+static int Y = 0;
 
 static uint8_t u8x8_gpio_and_delay(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr);
 
@@ -22,6 +27,67 @@ void init_display(void) {
   u8g2_Setup_st7920_s_128x64_f(&u8g2, U8G2_R0, u8x8_byte_4wire_sw_spi, u8x8_gpio_and_delay);
   u8g2_InitDisplay(&u8g2);
   u8g2_SetPowerSave(&u8g2, 0);
+
+  memset(DISPLAY, ' ', sizeof(DISPLAY));
+}
+
+void flush(void)
+{
+  u8g2_ClearBuffer(&u8g2);
+  u8g2_SetFont(&u8g2, u8g2_font_profont11_tr);
+  u8g2_SetDrawColor(&u8g2, 2);
+  u8g2_SetFontMode(&u8g2, 1);
+
+  for (int y = 0; y < H; ++y) {
+    for (int x = 0; x < W; ++x) {
+      u8g2_DrawGlyph(&u8g2, x * 6, y * 8 + 7, DISPLAY[y * W + x]);
+    }
+  }
+  u8g2_DrawBox(&u8g2, X * 6, Y * 8, 6, 8);
+
+  u8g2_SendBuffer(&u8g2);
+}
+
+void scroll(void)
+{
+  if (Y == H) {
+    Y -= 1;
+    for (int y = 0; y < H - 1; ++y)
+      memcpy(&DISPLAY[(y + 1) * W], &DISPLAY[y * W], W);
+  }
+}
+
+void putch(char c)
+{
+  if (c == 10) {
+    if (Y < H - 1) {
+      Y += 1;
+      X = 0;
+    } else {
+      Y += 1;
+      X = 0;
+      scroll();
+    }
+  } else if (c == 8) {
+    if (X > 0) {
+      X -= 1;
+    }
+  } else {
+    DISPLAY[Y * W + X] = c;
+    if (X == W - 1) {
+      Y += 1;
+      X = 0;
+      scroll();
+    } else {
+      X++;
+    }
+  }
+}
+
+void putstr(char const *s)
+{
+  while (*s)
+    putch(*s++);
 }
 
 char getch(void)
@@ -51,6 +117,43 @@ char getch(void)
     if (c && c != x) {
       x = c;
       return c;
+    }
+  }
+}
+
+int getline(char line[GETLINE_LEN]) {
+  int i = 0;
+
+  while (1) {
+    char c = getch();
+
+    if ((c >= 'A' && c <= 'Z') ||
+        (c >= '0' && c <= '9') ||
+        c == ' ' ||
+        c == '%' ||
+        c == '$' ||
+        c == '*' ||
+        c == '/' ||
+        c == '+' ||
+        c == '-' ||
+        c == '"' ||
+        c == '=') {
+      if (i < GETLINE_LEN) {
+        putch(c);
+        flush();
+        line[i] = c;
+        ++i;
+      }
+    } else if (c == 8) {
+      if (i > 0) {
+        putstr("\b \b");
+        flush();
+        --i;
+      }
+    } else if (c == 10) {
+      putch('\n');
+      flush();
+      return i;
     }
   }
 }

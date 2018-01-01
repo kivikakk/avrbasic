@@ -12,7 +12,7 @@ include Makefile.common
 all: $(TARGET)
 
 $(TARGET): ${firm_obj} ${add_obj}
-	avr-gcc -Wall -gdwarf-2 -Os -std=gnu99 \
+	@avr-gcc -Wall -gdwarf-2 -Os -std=gnu99 \
 			-mmcu=atmega328 \
 			-DF_CPU=8000000 \
 			-fno-inline-small-functions \
@@ -21,6 +21,8 @@ $(TARGET): ${firm_obj} ${add_obj}
 			-Wl,--undefined=_mmcu,--section-start=.mmcu=0x910000 \
 			${CPPFLAGS} \
 			$^ -o $@
+	@avr-size $@|sed '1d'
+
 
 dump: all
 	avr-objdump -d $(TARGET)
@@ -36,4 +38,4 @@ flash: all
 	avrdude -c usbtiny -p atmega328p -U flash:w:$(TARGET:.elf=.hex) -B 1
 
 clean:
-	rm -rf *.a *.axf *.o
+	rm -rf *.a *.axf *.o *.hex
