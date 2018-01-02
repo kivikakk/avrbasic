@@ -42,7 +42,7 @@ void test_tokenize(test_batch_runner *runner) {
 }
 
 void test_tokenize_string(test_batch_runner *runner) {
-  char const *inp = "  LET X$ = \"A\" + \"B\"";
+  char const *inp = "  LET X$ = \"A\"+\"B\"";
 
   char const *t = inp;
   char const *out;
