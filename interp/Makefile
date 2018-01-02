@@ -1,10 +1,15 @@
 TARGET = ../libinterp.a
-SRCS = $(wildcard *.c)
+SRCS = $(wildcard at_*.c)
 OBJS = $(SRCS:.c=.o)
 
 include ../Makefile.common
 
-all: $(TARGET)
+all: test
+
+.PHONY: test
+test:
+	gcc -o $@ $(SRCS) test.c harness.c -Wall
+	./$@
 
 .PRECIOUS: $(TARGET)
 

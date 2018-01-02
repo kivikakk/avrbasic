@@ -24,7 +24,7 @@ $(TARGET): ${firm_obj} ${add_obj} libinterp.a
 	@avr-size $@|sed '1d'
 
 libinterp.a: $(wildcard interp/*.[ch])
-	$(MAKE) -C interp
+	$(MAKE) -C interp ../libinterp.a
 
 dump: all
 	avr-objdump -d $(TARGET)
