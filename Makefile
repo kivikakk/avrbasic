@@ -11,7 +11,7 @@ include Makefile.common
 
 all: $(TARGET)
 
-$(TARGET): ${firm_obj} ${add_obj}
+$(TARGET): ${firm_obj} ${add_obj} libinterp.a
 	@avr-gcc -Wall -gdwarf-2 -Os -std=gnu99 \
 			-mmcu=atmega328 \
 			-DF_CPU=8000000 \
@@ -23,6 +23,8 @@ $(TARGET): ${firm_obj} ${add_obj}
 			$^ -o $@
 	@avr-size $@|sed '1d'
 
+libinterp.a: $(wildcard interp/*.[ch])
+	$(MAKE) -C interp
 
 dump: all
 	avr-objdump -d $(TARGET)
