@@ -20,6 +20,9 @@ void INT_EQ(test_batch_runner *runner, int got, int expected, const char *msg,
 void STR_EQ(test_batch_runner *runner, const char *got, const char *expected,
             const char *msg, ...);
 
+void STRN_EQ(test_batch_runner *runner, const char *got, const char *expected,
+             size_t n, const char *msg, ...);
+
 int test_ok(test_batch_runner *runner);
 
 void test_print_summary(test_batch_runner *runner);

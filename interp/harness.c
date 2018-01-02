@@ -53,12 +53,12 @@ void INT_EQ(test_batch_runner *runner, int got, int expected, const char *msg,
 #ifndef _WIN32
 #include <unistd.h>
 
-static char *write_tmp(char const *header, char const *data) {
+static char *write_tmp(char const *header, char const *data, size_t len) {
   char *name = strdup("/tmp/fileXXXXXX");
   int fd = mkstemp(name);
   FILE *f = fdopen(fd, "w+");
   fputs(header, f);
-  fwrite(data, 1, strlen(data), f);
+  fwrite(data, 1, len, f);
   fclose(f);
   return name;
 }
@@ -76,8 +76,41 @@ void STR_EQ(test_batch_runner *runner, const char *got, const char *expected,
 
   if (!cond) {
 #ifndef _WIN32
-    char *got_fn = write_tmp("actual\n", got);
-    char *expected_fn = write_tmp("expected\n", expected);
+    char *got_fn = write_tmp("actual\n", got, strlen(got));
+    char *expected_fn = write_tmp("expected\n", expected, strlen(expected));
+    char buf[1024];
+    snprintf(buf, sizeof(buf), "git diff --no-index %s %s", expected_fn, got_fn);
+    system(buf);
+    remove(got_fn);
+    remove(expected_fn);
+    free(got_fn);
+    free(expected_fn);
+#else
+    fprintf(stderr, "  Got:      \"%s\"\n", got);
+    fprintf(stderr, "  Expected: \"%s\"\n", expected);
+#endif
+  }
+}
+
+void STRN_EQ(test_batch_runner *runner, const char *got, const char *expected,
+             size_t n, const char *msg, ...) {
+  int cond = strncmp(got, expected, n) == 0;
+
+  va_list ap;
+  va_start(ap, msg);
+  test_result(runner, cond, msg, ap);
+  va_end(ap);
+
+  if (!cond) {
+#ifndef _WIN32
+    int gotn = strlen(got);
+    if (n < gotn)
+      gotn = n;
+    int expectedn = strlen(expected);
+    if (n < expectedn)
+      expectedn = n;
+    char *got_fn = write_tmp("actual\n", got, gotn);
+    char *expected_fn = write_tmp("expected\n", expected, expectedn);
     char buf[1024];
     snprintf(buf, sizeof(buf), "git diff --no-index %s %s", expected_fn, got_fn);
     system(buf);

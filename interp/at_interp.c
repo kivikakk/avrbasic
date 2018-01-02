@@ -21,13 +21,22 @@ enum token_type get_token_type(char c, enum token_type *previous) {
   return NONE;
 }
 
-size_t tokenize(char const **input, char **out) {
+size_t tokenize(char const **input, char const **out, enum token_type *token_type_out) {
   while (**input == ' ') {
-    ++(*input);
+    ++*input;
   }
 
-  if (!*input)
+  if (!**input)
     return 0;
 
-  return 0;
+  *out = *input;
+  *token_type_out = get_token_type(**input, NULL);
+  if (*token_type_out == NONE)
+    return 0;
+
+  while (**input && get_token_type(**input, token_type_out) == *token_type_out) {
+    ++*input;
+  }
+
+    return *input - *out;
 }
