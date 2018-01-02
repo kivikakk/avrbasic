@@ -35,8 +35,12 @@ size_t tokenize(char const **input, char const **out, enum token_type *token_typ
     return 0;
 
   while (**input && get_token_type(**input, token_type_out) == *token_type_out) {
+    if (*input != *out && **input == '"' && *token_type_out == STRING) {
+      ++*input;
+      break;
+    }
     ++*input;
   }
 
-    return *input - *out;
+  return *input - *out;
 }
