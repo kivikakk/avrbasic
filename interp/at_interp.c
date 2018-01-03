@@ -92,6 +92,14 @@ struct value exec_expr(char const *expr) {
     return v;
   }
 
-  
+  if (token_type == T_NUMBER) {
+    char num[40];
+    if (token >= sizeof(num)) {
+      token = sizeof(num) - 1;
+    }
+    strncpy(num, out, token);
+    v.as.number = atoi(num);
+  }
+
   return v;
 }
