@@ -11,7 +11,6 @@
 #include "at_exec.h"
 #include "u8g2.h"
 
-// for linker, emulator, and programmer's sake
 #include <avr/avr_mcu_section.h>
 AVR_MCU(F_CPU, "atmega328");
 
@@ -19,6 +18,9 @@ extern u8g2_t u8g2;
 
 int main(void)
 {
+  DDRB = (1 << PB3);
+  SPCR = (1 << SPE);
+
   init_display();
 
   char line[GETLINE_LEN + 1];
