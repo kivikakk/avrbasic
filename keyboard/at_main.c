@@ -5,6 +5,8 @@
 #include <util/delay.h>
 #include <avr/sleep.h>
 #include <string.h>
+#define BAUD 9600
+#include <util/setbaud.h>
 
 #include "at_main.h"
 
@@ -17,14 +19,15 @@ int main(void)
   //ADCSRA |= (1 << ADPS1) | (1 << ADPS0);
   //ADCSRA |= (1 << ADEN);
 
-  DDRB = (1 << PB2) | (1 << PB3) | (1 << PB5);
-  SPCR = (1 << SPE) | (1 << MSTR) | (1 << SPR0);
+  UBRRH = UBRRH_VALUE;
+  UBRRL = UBRRL_VALUE;
+  UCSRA &= ~(1 << U2X);
+  UCSRB = (1 << TXEN) | (1 << RXEN);
+  UCSRC = (1 << UCSZ1) | (1 << UCSZ0);
 
   while (1) {
-    //PORTB &= ~(1 << PB2);
-    SPDR = 'H';
-    while (!(SPSR & (1 << SPIF)));
-    //PORTB |= 1 << PB2;
+    while (!(UCSRA & (1 << UDRE)));
+    UDR = 'H';
   }
 
   static char x = 0;

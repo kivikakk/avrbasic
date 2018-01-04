@@ -11,8 +11,8 @@ all: $(TARGET)
 
 $(TARGET): ${firm_obj}
 	@avr-gcc -Wall -gdwarf-2 -Os -std=gnu99 \
-			-mmcu=atmega328 \
-			-DF_CPU=16000000 \
+			-mmcu=atmega8 \
+			-DF_CPU=8000000 \
 			-fno-inline-small-functions \
 			-ffunction-sections -fdata-sections \
 			-Wl,--relax,--gc-sections \
