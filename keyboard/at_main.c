@@ -13,12 +13,19 @@ AVR_MCU(F_CPU, "atmega8");
 
 int main(void)
 {
-  ADMUX |= (1 << REFS0) | (1 << MUX0) | (1 << MUX2);
-  ADCSRA |= (1 << ADPS1) | (1 << ADPS0);
-  ADCSRA |= (1 << ADEN);
+  //ADMUX |= (1 << REFS0) | (1 << MUX0) | (1 << MUX2);
+  //ADCSRA |= (1 << ADPS1) | (1 << ADPS0);
+  //ADCSRA |= (1 << ADEN);
 
-  DDRB = (1 << PB1) | (1 << PB2);
+  DDRB = (1 << PB2) | (1 << PB3) | (1 << PB5);
   SPCR = (1 << SPE) | (1 << MSTR) | (1 << SPR0);
+
+  while (1) {
+    //PORTB &= ~(1 << PB2);
+    SPDR = 'H';
+    while (!(SPSR & (1 << SPIF)));
+    //PORTB |= 1 << PB2;
+  }
 
   static char x = 0;
 

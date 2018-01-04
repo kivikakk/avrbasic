@@ -5,6 +5,8 @@
 #include <util/delay.h>
 #include <avr/sleep.h>
 #include <string.h>
+#define BAUD 9600
+#include <util/setbaud.h>
 
 #include "at_main.h"
 #include "at_display.h"
@@ -18,8 +20,11 @@ extern u8g2_t u8g2;
 
 int main(void)
 {
-  DDRB = (1 << PB3);
-  SPCR = (1 << SPE);
+  UBRR0H = UBRRH_VALUE;
+  UBRR0L = UBRRL_VALUE;
+  UCSR0A &= ~(1 << U2X0);
+  UCSR0B = (1 << TXEN0) | (1 << RXEN0);
+  UCSR0C = (1 << UCSZ01) | (1 << UCSZ00);
 
   init_display();
 

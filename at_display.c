@@ -29,9 +29,9 @@ static uint8_t u8x8_gpio_and_delay(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, v
   switch(msg)
   {
     case U8X8_MSG_GPIO_AND_DELAY_INIT:
-      DDRB |= (1 << PB0);
+      DDRB = (1 << PB0) | (1 << PB1) | (1 << PB2);
       DDRC = (1 << PC0) | (1 << PC1) | (1 << PC2);
-      DDRD = (1 << PD0) | (1 << PD1) | (1 << PD2) | (1 << PD3) | (1 << PD4) | (1 << PD5) | (1 << PD7);
+      DDRD = (1 << PD2) | (1 << PD3) | (1 << PD4) | (1 << PD5) | (1 << PD7);
       break;
 
     case U8X8_MSG_DELAY_NANO:
@@ -87,16 +87,16 @@ static uint8_t u8x8_gpio_and_delay(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, v
 
     case U8X8_MSG_GPIO_D5:				// D5 pin: Output level in arg_int
       if (arg_int)
-        PORTD |= (1 << PD1);
+        PORTB |= (1 << PB1);
       else
-        PORTD &= ~(1 << PD1);
+        PORTB &= ~(1 << PB1);
       break;
 
     case U8X8_MSG_GPIO_D6:				// D6 pin: Output level in arg_int
       if (arg_int)
-        PORTD |= (1 << PD0);
+        PORTB |= (1 << PB2);
       else
-        PORTD &= ~(1 << PD0);
+        PORTB &= ~(1 << PB2);
       break;
 
     case U8X8_MSG_GPIO_D7:				// D7 pin: Output level in arg_int
@@ -198,8 +198,8 @@ void putstr(char const *s)
 
 char getch(void)
 {
-    while (!(SPSR & (1 << SPIF)));
-    return SPDR;
+  while (!(UCSR0A & (1 << RXC0)));
+  return UDR0;
 }
 
 int getline(char line[GETLINE_LEN]) {
