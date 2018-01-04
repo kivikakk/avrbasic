@@ -78,6 +78,12 @@ char const *exec_stmt(char const *stmt) {
   return NULL;
 }
 
+enum binop {
+  ADD,
+  SUBTRACT,
+  EQUAL,
+};
+
 struct value exec_expr(char const *expr) {
   struct value v;
   char const *t = expr, *out;
@@ -99,7 +105,26 @@ struct value exec_expr(char const *expr) {
     }
     strncpy(num, out, token);
     v.as.number = atoi(num);
-  }
 
-  return v;
+    if ((token = tokenize(&t, &out, &token_type)) == 0) {
+      return v;
+    }
+
+    if (token != T_BINOP) {
+      // TODO ERROR
+      return v;
+    }
+
+    enum binop binop;
+    if (token == 1 && *out == '+') {
+      binop = ADD;
+    } else if (token == 1 && *out == '-') {
+      binop = SUBTRACT;
+    } else if (token == 1 && *out == '=') {
+      binop = EQUAL;
+    } else {
+      // TODO ERROR
+      return v;
+    }
+  }
 }

@@ -1,6 +1,8 @@
 #ifndef AT_INTERP_H
 #define AT_INTERP_H
 
+#include <stdint.h>
+
 enum token_type {
   T_NONE,
   T_NUMBER,
