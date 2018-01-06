@@ -103,6 +103,16 @@ void test_exec_expr(test_batch_runner *runner) {
   value = exec_expr();
   INT_EQ(runner, value.type, V_NUMBER, "exec_expr (1 - 2) - 2 value.type");
   INT_EQ(runner, value.as.number, -3, "exec_expr (1 - 2) - 2 value.as.number");
+
+  prep("1 - 2 - 2");
+  value = exec_expr();
+  INT_EQ(runner, value.type, V_NUMBER, "exec_expr 1 - 2 - 2 value.type");
+  INT_EQ(runner, value.as.number, -3, "exec_expr 1 - 2 - 2 value.as.number");
+
+  prep("1 - (2 - 2)");
+  value = exec_expr();
+  INT_EQ(runner, value.type, V_NUMBER, "exec_expr 1 - (2 - 2) value.type");
+  INT_EQ(runner, value.as.number, 1, "exec_expr 1 - (2 - 2) value.as.number");
 }
 
 int main() {
