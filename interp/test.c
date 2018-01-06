@@ -83,46 +83,53 @@ void test_tokenize_empty(test_batch_runner *runner) {
 
 void test_exec_expr(test_batch_runner *runner) {
   struct value value;
+  char const *err = NULL;
 
   prep("1");
-  value = exec_expr();
+  value = exec_expr(&err);
   INT_EQ(runner, value.type, V_NUMBER, "exec_expr 1 value.type");
   INT_EQ(runner, value.as.number, 1, "exec_expr 1 value.as.number");
 
   prep("1 + 2");
-  value = exec_expr();
+  value = exec_expr(&err);
   INT_EQ(runner, value.type, V_NUMBER, "exec_expr 1 + 2 value.type");
   INT_EQ(runner, value.as.number, 3, "exec_expr 1 + 2 value.as.number");
 
   prep("1 - 2");
-  value = exec_expr();
+  value = exec_expr(&err);
   INT_EQ(runner, value.type, V_NUMBER, "exec_expr 1 - 2 value.type");
   INT_EQ(runner, value.as.number, -1, "exec_expr 1 - 2 value.as.number");
 
   prep("(1 - 2) - 2");
-  value = exec_expr();
+  value = exec_expr(&err);
   INT_EQ(runner, value.type, V_NUMBER, "exec_expr (1 - 2) - 2 value.type");
   INT_EQ(runner, value.as.number, -3, "exec_expr (1 - 2) - 2 value.as.number");
 
   prep("1 - 2 - 2");
-  value = exec_expr();
+  value = exec_expr(&err);
   INT_EQ(runner, value.type, V_NUMBER, "exec_expr 1 - 2 - 2 value.type");
   INT_EQ(runner, value.as.number, -3, "exec_expr 1 - 2 - 2 value.as.number");
 
   prep("1 - (2 - 2)");
-  value = exec_expr();
+  value = exec_expr(&err);
   INT_EQ(runner, value.type, V_NUMBER, "exec_expr 1 - (2 - 2) value.type");
   INT_EQ(runner, value.as.number, 1, "exec_expr 1 - (2 - 2) value.as.number");
 
   prep("1 - (2 - 2) = 0 + 2 - 1");
-  value = exec_expr();
+  value = exec_expr(&err);
   INT_EQ(runner, value.type, V_NUMBER, "exec_expr 1 - (2 - 2) = 0 + 2 - 1 value.type");
   INT_EQ(runner, value.as.number, 1, "exec_expr 1 - (2 - 2) = 0 + 2 - 1 value.as.number");
 
   prep("1 - (2 - 2) = 1 + 2 - 1");
-  value = exec_expr();
+  value = exec_expr(&err);
   INT_EQ(runner, value.type, V_NUMBER, "exec_expr 1 - (2 - 2) = 1 + 2 - 1 value.type");
   INT_EQ(runner, value.as.number, 0, "exec_expr 1 - (2 - 2) = 1 + 2 - 1 value.as.number");
+
+  INT_EQ(runner, (int)err, 0, "no errors");
+  prep("1 -");
+  value = exec_expr(&err);
+  STR_EQ(runner, err, "expected factor", "exec_expr 1 - error");
+
 }
 
 int main() {

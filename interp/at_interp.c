@@ -100,9 +100,10 @@ static bool accept(enum token_type tt) {
   return false;
 }
 
-static bool expect(enum token_type tt) {
+static bool expect(enum token_type tt, char const **err) {
   if (accept(tt))
     return true;
+  *err = "unexpected symbol";
 #ifdef TEST
   fprintf(stderr, "unexpected symbol %s, expected %s\n", tts(token_type), tts(tt));
 #endif
@@ -114,27 +115,32 @@ void prep(char const *text) {
   nextsym();
 }
 
-char const *exec_stmt(char const *stmt) {
+void exec_stmt(char const *stmt, char const **err) {
   t = stmt;
 
   if (!nextsym())
-    return NULL;
+    return;
 
   if (token == 3 && strncmp(out, "LET", 3) == 0) {
-    if (!nextsym())
-      return "expected token after LET";
+    if (!nextsym()) {
+      *err = "expected token after LET";
+      return;
+    }
 
-    if (token_type != T_LABEL)
-      return "expected label after LET";
+    if (token_type != T_LABEL) {
+      *err = "expected label after LET";
+      return;
+    }
 
-    if (!nextsym())
-      return "expected token after LET label";
+    if (!nextsym()) {
+      *err = "expected token after LET label";
+      return;
+    }
 
-    if (!expect(T_EQUAL))
-      return "expected = after LET label";
+    if (!expect(T_EQUAL, err)) {
+      return;
+    }
   }
-
-  return NULL;
 }
 
 enum binop {
@@ -145,15 +151,19 @@ enum binop {
   EQUAL,
 };
 
-static struct value outer(void);
-static struct value term(void);
-static struct value factor(void);
+static struct value outer(char const **err);
+static struct value term(char const **err);
+static struct value factor(char const **err);
 
-struct value exec_expr(void) {
-  struct value v = outer();
+struct value exec_expr(char const **err) {
+  struct value v = outer(err);
+  if (*err)
+    return v;
 
   while (accept(T_EQUAL)) {
-    struct value v2 = outer();
+    struct value v2 = outer(err);
+    if (*err)
+      return v;
 
     v.as.number = (v.as.number == v2.as.number);
   }
@@ -161,13 +171,17 @@ struct value exec_expr(void) {
   return v;
 }
 
-static struct value outer(void) {
-  struct value v = term();
+static struct value outer(char const **err) {
+  struct value v = term(err);
+  if (*err)
+    return v;
 
   while (accept(T_ADD) || accept(T_SUBTRACT)) {
     enum token_type binop = accept_token_type;
 
-    struct value v2 = factor();
+    struct value v2 = term(err);
+    if (*err)
+      return v;
 
     switch (binop) {
     case T_ADD:
@@ -184,13 +198,17 @@ static struct value outer(void) {
   return v;
 }
 
-static struct value term(void) {
-  struct value v = factor();
+static struct value term(char const **err) {
+  struct value v = factor(err);
+  if (*err)
+    return v;
 
   while (accept(T_MULTIPLY) || accept(T_DIVIDE)) {
     enum token_type binop = accept_token_type;
 
-    struct value v2 = factor();
+    struct value v2 = factor(err);
+    if (*err)
+      return v;
 
     switch (binop) {
     case T_MULTIPLY:
@@ -207,7 +225,7 @@ static struct value term(void) {
   return v;
 }
 
-static struct value factor(void) {
+static struct value factor(char const **err) {
   struct value v;
   v.type = V_NUMBER;
   v.as.number = -32768;
@@ -224,10 +242,11 @@ static struct value factor(void) {
   }
 
   if (accept(T_LPAREN)) {
-    v = exec_expr();
-    expect(T_RPAREN);
+    v = exec_expr(err);
+    expect(T_RPAREN, err);
     return v;
   }
 
+  *err = "expected factor";
   return v;
 }
