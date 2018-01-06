@@ -145,10 +145,23 @@ enum binop {
   EQUAL,
 };
 
+static struct value outer(void);
 static struct value term(void);
 static struct value factor(void);
 
 struct value exec_expr(void) {
+  struct value v = outer();
+
+  while (accept(T_EQUAL)) {
+    struct value v2 = outer();
+
+    v.as.number = (v.as.number == v2.as.number);
+  }
+
+  return v;
+}
+
+static struct value outer(void) {
   struct value v = term();
 
   while (accept(T_ADD) || accept(T_SUBTRACT)) {
@@ -173,9 +186,10 @@ struct value exec_expr(void) {
 
 static struct value term(void) {
   struct value v = factor();
+
   while (accept(T_MULTIPLY) || accept(T_DIVIDE)) {
     enum token_type binop = accept_token_type;
-    
+
     struct value v2 = factor();
 
     switch (binop) {
