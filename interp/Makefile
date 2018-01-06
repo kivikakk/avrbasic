@@ -8,10 +8,14 @@ all: test
 
 .PHONY: test
 test:
-	gcc -o $@ $(SRCS) test.c harness.c -Wall
+	gcc -g -DTEST -o $@ $(SRCS) test.c harness.c -Wall
 	./$@
 
 .PRECIOUS: $(TARGET)
 
 $(TARGET): $(OBJS)
 	avr-ar cru $@ $^ && avr-ranlib $@
+
+docker:
+	docker build -t avrbasic-interp $(CURDIR)
+	docker run --privileged -t -i -v $(CURDIR)/../:/src/avrbasic/ -w /src/avrbasic/interp avrbasic-interp /bin/bash
