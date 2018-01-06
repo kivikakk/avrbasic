@@ -12,7 +12,7 @@ all: $(TARGET)
 $(TARGET): ${firm_obj}
 	@avr-gcc -Wall -gdwarf-2 -Os -std=gnu99 \
 			-mmcu=atmega8 \
-			-DF_CPU=8000000 \
+			-DF_CPU=1000000 \
 			-fno-inline-small-functions \
 			-ffunction-sections -fdata-sections \
 			-Wl,--relax,--gc-sections \
@@ -32,7 +32,7 @@ gdb:
 
 flash: all
 	avr-objcopy -j .text -j .data -j .eeprom -O ihex $(TARGET) $(TARGET:.elf=.hex)
-	avrdude -c usbtiny -p atmega8 -U flash:w:$(TARGET:.elf=.hex) -B 1
+	avrdude -c usbtiny -p atmega8 -U flash:w:$(TARGET:.elf=.hex) -B 3
 
 clean:
 	rm -rf *.a *.axf *.o *.hex

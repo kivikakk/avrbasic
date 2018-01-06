@@ -29,9 +29,9 @@ static uint8_t u8x8_gpio_and_delay(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, v
   switch(msg)
   {
     case U8X8_MSG_GPIO_AND_DELAY_INIT:
-      DDRB = (1 << PB0) | (1 << PB1) | (1 << PB2);
+      DDRB = (1 << PB0) | (1 << PB1) | (1 << PB2) | (1 << PB3);
       DDRC = (1 << PC0) | (1 << PC1) | (1 << PC2);
-      DDRD = (1 << PD2) | (1 << PD3) | (1 << PD4) | (1 << PD5) | (1 << PD7);
+      DDRD = (1 << PD2) | (1 << PD3) | (1 << PD5) | (1 << PD7);
       break;
 
     case U8X8_MSG_DELAY_NANO:
@@ -66,9 +66,9 @@ static uint8_t u8x8_gpio_and_delay(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, v
 
     case U8X8_MSG_GPIO_D2:				// D2 pin: Output level in arg_int
       if (arg_int)
-        PORTD |= (1 << PD4);
+        PORTB |= (1 << PB3);
       else
-        PORTD &= ~(1 << PD4);
+        PORTB &= ~(1 << PB3);
       break;
 
     case U8X8_MSG_GPIO_D3:				// D3 pin: Output level in arg_int

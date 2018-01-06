@@ -1,11 +1,14 @@
 #define __DELAY_BACKWARD_COMPATIBLE__
 
+#define FOSC 1000000
+#define BAUD 4800
+#define MYUBRR FOSC/16/BAUD-1
+
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include <avr/sleep.h>
 #include <string.h>
-#define BAUD 9600
 #include <util/setbaud.h>
 
 #include "at_main.h"
@@ -19,15 +22,31 @@ int main(void)
   //ADCSRA |= (1 << ADPS1) | (1 << ADPS0);
   //ADCSRA |= (1 << ADEN);
 
+  DDRB = (1 << PB0);
+
   UBRRH = UBRRH_VALUE;
   UBRRL = UBRRL_VALUE;
   UCSRA &= ~(1 << U2X);
-  UCSRB = (1 << TXEN) | (1 << RXEN);
-  UCSRC = (1 << UCSZ1) | (1 << UCSZ0);
+  UCSRB = (1 << RXEN) | (1 << TXEN);
+  UCSRC = (1 << URSEL) | (1 << UCSZ1) | (1 << UCSZ0);
 
+  int i = 0;
+  char y = 'H';
   while (1) {
+    
+
+    if (i) {
+      i = 0;
+      PORTB &= ~(1 << PB0);
+    } else {
+      i = 1;
+      PORTB |= (1 << PB0);
+    }
+
     while (!(UCSRA & (1 << UDRE)));
-    UDR = 'H';
+    UDR = y;
+    while (!(UCSRA & (1 << RXC)));
+    y = UDR;
   }
 
   static char x = 0;
