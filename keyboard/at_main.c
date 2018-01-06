@@ -18,36 +18,15 @@ AVR_MCU(F_CPU, "atmega8");
 
 int main(void)
 {
-  //ADMUX |= (1 << REFS0) | (1 << MUX0) | (1 << MUX2);
-  //ADCSRA |= (1 << ADPS1) | (1 << ADPS0);
-  //ADCSRA |= (1 << ADEN);
-
-  DDRB = (1 << PB0);
+  ADMUX |= (1 << REFS0) | (1 << MUX0) | (1 << MUX2);
+  ADCSRA |= (1 << ADPS1) | (1 << ADPS0);
+  ADCSRA |= (1 << ADEN);
 
   UBRRH = UBRRH_VALUE;
   UBRRL = UBRRL_VALUE;
   UCSRA &= ~(1 << U2X);
   UCSRB = (1 << RXEN) | (1 << TXEN);
   UCSRC = (1 << URSEL) | (1 << UCSZ1) | (1 << UCSZ0);
-
-  int i = 0;
-  char y = 'H';
-  while (1) {
-    
-
-    if (i) {
-      i = 0;
-      PORTB &= ~(1 << PB0);
-    } else {
-      i = 1;
-      PORTB |= (1 << PB0);
-    }
-
-    while (!(UCSRA & (1 << UDRE)));
-    UDR = y;
-    while (!(UCSRA & (1 << RXC)));
-    y = UDR;
-  }
 
   static char x = 0;
 
@@ -64,18 +43,21 @@ int main(void)
     } else if (r >= 845 && r <= 865) {
       c = 'C';
     } else if (r >= 920 && r <= 940) {
-      c = '\n';
+      c = 'D';
     } else if (r >= 1005 && r <= 1025) {
-      c = 8;
+      c = 'E';
     } else {
+      if (x) {
+        _delay_ms(25);
+      }
       x = 0;
     }
 
     if (c && c != x) {
       x = c;
 
-      SPDR = c;
-      while (!(SPSR & (1 << SPIF)));
+      while (!(UCSRA & (1 << UDRE)));
+      UDR = c;
     }
   }
 

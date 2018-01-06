@@ -225,6 +225,14 @@ int getline(char line[GETLINE_LEN]) {
         line[i] = c;
         ++i;
       }
+    } else if (c >= 'a' && c <= 'z') {
+      // For ease of debugging.
+      if (i < GETLINE_LEN) {
+        putch(c - ('a' - 'A'));
+        flush();
+        line[i] = c - ('a' - 'A');
+        ++i;
+      }
     } else if (c == 8) {
       if (i > 0) {
         putstr("\b \b");

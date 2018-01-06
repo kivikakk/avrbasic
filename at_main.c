@@ -5,7 +5,7 @@
 #include <util/delay.h>
 #include <avr/sleep.h>
 #include <string.h>
-#define BAUD 9600
+#define BAUD 4800
 #include <util/setbaud.h>
 
 #include "at_main.h"
@@ -24,8 +24,7 @@ int main(void)
   UBRR0L = UBRRL_VALUE;
   UCSR0A &= ~(1 << U2X0);
   UCSR0B = (1 << RXEN0);
-  UCSR0C = (1 << UMSEL00) | (1 << UCSZ01) | (1 << UCSZ00);
-  DDRD &= ~(1 << PD4);
+  UCSR0C = (1 << UCSZ01) | (1 << UCSZ00);
 
   init_display();
 
