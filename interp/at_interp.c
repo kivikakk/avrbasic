@@ -95,7 +95,7 @@ size_t tokenize(char const **input, char const **out, enum token_type *token_typ
       *token_type_out = T_S_ELSEIF;
     } else if (*input - *out == 3 && strncmp(*out, "END", 3) == 0) {
       *token_type_out = T_S_END;
-    } else if (*input - *out == 3 && strncmp(*out, "LIST", 4) == 0) {
+    } else if (*input - *out == 4 && strncmp(*out, "LIST", 4) == 0) {
       *token_type_out = T_S_LIST;
     }
   }
@@ -198,6 +198,7 @@ static void exec_stmt_let(char *err);
 static void exec_stmt_print(char *err);
 static void exec_stmt_input(char *err);
 static void exec_stmt_lno(char *err);
+static void exec_stmt_list(char *err);
 
 void exec_stmt(char const *stmt, char *err) {
   t = stmt;
@@ -222,6 +223,11 @@ void exec_stmt(char const *stmt, char *err) {
 
   if (accept(T_NUMBER)) {
     exec_stmt_lno(err);
+    return;
+  }
+
+  if (accept(T_S_LIST)) {
+    exec_stmt_list(err);
     return;
   }
 
@@ -336,16 +342,34 @@ static void exec_stmt_lno(char *err) {
     return;
   }
 
+  char lineno[7];
   char line[MAX_LINE_LEN + 1];
   int len = get_line(lno, line, err);
   if (*err)
     return;
   line[len] = 0;
-  // HACK: we should re-snprintf `lno` probably
-  putstr(accept_out);
-  putstr(" ");
+  snprintf(lineno, sizeof(lineno), "%d ", lno);
+  putstr(lineno);
   putstr(line);
   putstr("\n");
+}
+
+static void exec_stmt_list(char *err) {
+  char line[MAX_LINE_LEN + 1];
+  char lineno[7];
+
+  for (uint16_t lno = MIN_LINE; lno <= MAX_LINE; ++lno) {
+    int len = get_line(lno, line, err);
+    if (*err)
+      return;
+    if (!len)
+      continue;
+    line[len] = 0;
+    snprintf(lineno, sizeof(lineno), "%d ", lno);
+    putstr(lineno);
+    putstr(line);
+    putstr("\n");
+  }
 }
 
 enum binop {

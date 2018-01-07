@@ -12,7 +12,7 @@ char const LINE_NO_REQ_ERR[] PROGMEM = "line number required";
 char const LINE_LENGTH_ERR[] PROGMEM = "line too long";
 char const PHEAP_OVERRUN_ERR[] PROGMEM = "overran program heap";
 
-static uint16_t MIN_LINE, MAX_LINE;
+uint16_t MIN_LINE, MAX_LINE;
 
 void add_line(uint16_t lno, char const *line, char *err) {
   size_t o = 0;

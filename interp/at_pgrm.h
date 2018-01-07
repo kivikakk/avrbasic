@@ -6,4 +6,6 @@
 void add_line(uint16_t lno, char const *line, char *err);
 int get_line(uint16_t lno, char line[MAX_LINE_LEN], char *err);
 
+extern uint16_t MIN_LINE, MAX_LINE;
+
 #endif
