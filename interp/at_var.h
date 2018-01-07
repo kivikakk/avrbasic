@@ -3,8 +3,8 @@
 
 #include "at_interp.h"
 
-void add_var(char name[3], struct value v, char const **err);
-struct value get_var(char name[3], char const **err);
+void add_var(char name[3], struct value v, char *err);
+struct value get_var(char name[3], char *err);
 
 #endif
 

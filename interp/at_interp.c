@@ -145,14 +145,11 @@ static bool accept(enum token_type tt) {
   return false;
 }
 
-static bool expect(enum token_type tt, char const **err) {
+static bool expect(enum token_type tt, char *err) {
   if (accept(tt))
     return true;
 
-  static char EXPECT_ERR[40];
-  snprintf(EXPECT_ERR, sizeof(EXPECT_ERR), "unexpected %s, expected %s", tts(token_type), tts(tt));
-  *err = EXPECT_ERR;
-
+  snprintf(err, ERR_LEN, "unexpected %s, expected %s", tts(token_type), tts(tt));
   return false;
 }
 
@@ -161,7 +158,7 @@ void prep(char const *text) {
   nextsym();
 }
 
-void exec_stmt(char const *stmt, char const **err) {
+void exec_stmt(char const *stmt, char *err) {
   t = stmt;
 
   if (!nextsym())
@@ -178,7 +175,7 @@ void exec_stmt(char const *stmt, char const **err) {
     label[2] = accept_out[accept_token - 1];
 
     if (label[2] != '%' && label[2] != '$') {
-      *err = "expected var name to end in % or $";
+      snprintf(err, ERR_LEN, "%s", "expected var name to end in % or $");
       return;
     }
 
@@ -255,7 +252,7 @@ void exec_stmt(char const *stmt, char const **err) {
       memcpy(v.as.string, line, len);
       v.as.string[len] = 0;
     } else {
-      *err = "INPUT encountered unknown var";
+      snprintf(err, ERR_LEN, "%s", "INPUT encountered unknown var");
       return;
     }
 
@@ -267,7 +264,7 @@ void exec_stmt(char const *stmt, char const **err) {
     return;
   }
 
-  *err = "invalid statement";
+  snprintf(err, ERR_LEN, "%s", "invalid statement");
 }
 
 enum binop {
@@ -278,11 +275,11 @@ enum binop {
   EQUAL,
 };
 
-static struct value outer(char const **err);
-static struct value term(char const **err);
-static struct value factor(char const **err);
+static struct value outer(char *err);
+static struct value term(char *err);
+static struct value factor(char *err);
 
-struct value exec_expr(char const **err) {
+struct value exec_expr(char *err) {
   struct value v = outer(err);
   if (*err)
     return v;
@@ -298,7 +295,7 @@ struct value exec_expr(char const **err) {
   return v;
 }
 
-static struct value outer(char const **err) {
+static struct value outer(char *err) {
   struct value v = term(err);
   if (*err)
     return v;
@@ -311,7 +308,7 @@ static struct value outer(char const **err) {
       return v;
 
     if (v.type != v2.type) {
-      *err = "type error";
+      snprintf(err, ERR_LEN, "%s", "type error");
       return v;
     }
 
@@ -325,7 +322,7 @@ static struct value outer(char const **err) {
         int l1 = strlen(v.as.string);
         int l2 = strlen(v2.as.string);
         if (l1 + l2 > MAX_STRING) {
-          *err = "string too long";
+          snprintf(err, ERR_LEN, "%s", "string too long");
           return v;
         }
         strcat(v.as.string, v2.as.string);
@@ -340,7 +337,7 @@ static struct value outer(char const **err) {
         v.as.number -= v2.as.number;
         break;
       case V_STRING:
-        *err = "type error";
+        snprintf(err, ERR_LEN, "%s", "type error");
         return v;
       }
       break;
@@ -352,7 +349,7 @@ static struct value outer(char const **err) {
   return v;
 }
 
-static struct value term(char const **err) {
+static struct value term(char *err) {
   struct value v = factor(err);
   if (*err)
     return v;
@@ -365,7 +362,7 @@ static struct value term(char const **err) {
       return v;
 
     if (v.type != v2.type) {
-      *err = "type error";
+      snprintf(err, ERR_LEN, "%s", "type error");
       return v;
     }
 
@@ -376,7 +373,7 @@ static struct value term(char const **err) {
         v.as.number *= v2.as.number;
         break;
       case V_STRING:
-        *err = "type error";
+        snprintf(err, ERR_LEN, "%s", "type error");
         return v;
       }
       break;
@@ -386,7 +383,7 @@ static struct value term(char const **err) {
         v.as.number /= v2.as.number;
         break;
       case V_STRING:
-        *err = "type error";
+        snprintf(err, ERR_LEN, "%s", "type error");
         return v;
       }
       break;
@@ -398,7 +395,7 @@ static struct value term(char const **err) {
   return v;
 }
 
-static struct value factor(char const **err) {
+static struct value factor(char *err) {
   struct value v;
   v.type = V_NUMBER;
   v.as.number = -32768;
@@ -428,9 +425,8 @@ static struct value factor(char const **err) {
     label[2] = accept_out[accept_token - 1];
 
     v = get_var(label, err);
-    if (*err) {
+    if (*err)
       return v;
-    }
 
     return v;
   }
@@ -445,6 +441,6 @@ static struct value factor(char const **err) {
     return v;
   }
 
-  *err = "expected factor";
+  snprintf(err, ERR_LEN, "%s", "expected factor");
   return v;
 }

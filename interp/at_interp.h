@@ -6,6 +6,7 @@
 
 #define MAX_STRING 25
 #define GETLN_LEN 80
+#define ERR_LEN 80
 
 enum token_type {
   T_NONE,
@@ -46,7 +47,7 @@ struct value {
 enum token_type get_token_type(char c, enum token_type *previous);
 size_t tokenize(char const **input, char const **out, enum token_type *token_type_out);
 void prep(char const *text);
-struct value exec_expr(char const **err);
-void exec_stmt(char const *stmt, char const **err);
+struct value exec_expr(char *err);
+void exec_stmt(char const *stmt, char *err);
 
 #endif

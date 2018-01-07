@@ -11,7 +11,7 @@ run-test: test
 	./test
 
 test: $(SRCS) test.c harness.c
-	gcc -g -o $@ $^ -Wall
+	gcc -DTEST -g -o $@ $^ -Wall
 
 .PRECIOUS: $(TARGET)
 

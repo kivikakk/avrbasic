@@ -119,141 +119,141 @@ void test_tokenize_empty(test_batch_runner *runner) {
 
 void test_exec_expr(test_batch_runner *runner) {
   struct value value;
-  char const *err = NULL;
+  char err[ERR_LEN] = {0};
 
   prep("1");
-  value = exec_expr(&err);
+  value = exec_expr(err);
   INT_EQ(runner, value.type, V_NUMBER, "exec_expr 1 value.type");
   INT_EQ(runner, value.as.number, 1, "exec_expr 1 value.as.number");
 
   prep("1 + 2");
-  value = exec_expr(&err);
+  value = exec_expr(err);
   INT_EQ(runner, value.type, V_NUMBER, "exec_expr 1 + 2 value.type");
   INT_EQ(runner, value.as.number, 3, "exec_expr 1 + 2 value.as.number");
 
   prep("1 - 2");
-  value = exec_expr(&err);
+  value = exec_expr(err);
   INT_EQ(runner, value.type, V_NUMBER, "exec_expr 1 - 2 value.type");
   INT_EQ(runner, value.as.number, -1, "exec_expr 1 - 2 value.as.number");
 
   prep("(1 - 2) - 2");
-  value = exec_expr(&err);
+  value = exec_expr(err);
   INT_EQ(runner, value.type, V_NUMBER, "exec_expr (1 - 2) - 2 value.type");
   INT_EQ(runner, value.as.number, -3, "exec_expr (1 - 2) - 2 value.as.number");
 
   prep("1 - 2 - 2");
-  value = exec_expr(&err);
+  value = exec_expr(err);
   INT_EQ(runner, value.type, V_NUMBER, "exec_expr 1 - 2 - 2 value.type");
   INT_EQ(runner, value.as.number, -3, "exec_expr 1 - 2 - 2 value.as.number");
 
   prep("1 - (2 - 2)");
-  value = exec_expr(&err);
+  value = exec_expr(err);
   INT_EQ(runner, value.type, V_NUMBER, "exec_expr 1 - (2 - 2) value.type");
   INT_EQ(runner, value.as.number, 1, "exec_expr 1 - (2 - 2) value.as.number");
 
   prep("1 - (2 - 2) = 0 + 2 - 1");
-  value = exec_expr(&err);
+  value = exec_expr(err);
   INT_EQ(runner, value.type, V_NUMBER, "exec_expr 1 - (2 - 2) = 0 + 2 - 1 value.type");
   INT_EQ(runner, value.as.number, 1, "exec_expr 1 - (2 - 2) = 0 + 2 - 1 value.as.number");
 
   prep("1 - (2 - 2) = 1 + 2 - 1");
-  value = exec_expr(&err);
+  value = exec_expr(err);
   INT_EQ(runner, value.type, V_NUMBER, "exec_expr 1 - (2 - 2) = 1 + 2 - 1 value.type");
   INT_EQ(runner, value.as.number, 0, "exec_expr 1 - (2 - 2) = 1 + 2 - 1 value.as.number");
 
-  INT_EQ(runner, (int)err, 0, "no errors");
+  STR_EQ(runner, err, NULL, "no errors");
   prep("1 -");
-  value = exec_expr(&err);
+  value = exec_expr(err);
   STR_EQ(runner, err, "expected factor", "exec_expr 1 - error");
 
-  err = NULL;
+  *err = 0;
   prep("\"ABC\"");
-  value = exec_expr(&err);
+  value = exec_expr(err);
   INT_EQ(runner, value.type, V_STRING, "exec_expc \"ABC\" value.type");
   STR_EQ(runner, value.as.string, "ABC", "exec_expc \"ABC\" value.as.string");
   STR_EQ(runner, err, NULL, "exec_expr \"ABC\" err");
 }
 
 void test_exec_stmt_print(test_batch_runner *runner) {
-  char const *err = NULL;
+  char err[ERR_LEN] = {0};
 
   STDOUT_BUF[0] = 0;
-  exec_stmt("PRINT 4+4*2", &err);
+  exec_stmt("PRINT 4+4*2", err);
   STR_EQ(runner, err, NULL, "PRINT success");
   STR_EQ(runner, STDOUT_BUF, "12\n", "PRINT result");
 
   STDOUT_BUF[0] = 0;
-  exec_stmt("PRINT \"ABC\"", &err);
+  exec_stmt("PRINT \"ABC\"", err);
   STR_EQ(runner, err, NULL, "PRINT \"ABC\" success");
   STR_EQ(runner, STDOUT_BUF, "ABC\n", "PRINT \"ABC\" result");
 
   STDOUT_BUF[0] = 0;
-  exec_stmt("PRINT \"ABC\" + \"DEF\"", &err);
+  exec_stmt("PRINT \"ABC\" + \"DEF\"", err);
   STR_EQ(runner, err, NULL, "PRINT \"ABC\" + \"DEF\" success");
   STR_EQ(runner, STDOUT_BUF, "ABCDEF\n", "PRINT \"ABC\" + \"DEF\" result");
 
   STDOUT_BUF[0] = 0;
-  exec_stmt("PRINT \"ABC\", 2*2, \"DEF\"", &err);
+  exec_stmt("PRINT \"ABC\", 2*2, \"DEF\"", err);
   STR_EQ(runner, err, NULL, "PRINT \"ABC\", 2*2, \"DEF\" success");
   STR_EQ(runner, STDOUT_BUF, "ABC4DEF\n", "PRINT \"ABC\", 2*2, \"DEF\" result");
 }
 
 void test_exec_stmt_let(test_batch_runner *runner) {
-  char const *err = NULL;
-  exec_stmt("LET", &err);
+  char err[ERR_LEN] = {0};
+  exec_stmt("LET", err);
   STR_EQ(runner, err, "unexpected T_NONE, expected T_LABEL", "LET wants args");
 
-  err = NULL;
-  exec_stmt("LET XYZ = 1", &err);
+  *err = 0;
+  exec_stmt("LET XYZ = 1", err);
   STR_EQ(runner, err, "expected var name to end in % or $", "LET wants typed var name");
 
-  err = NULL;
-  exec_stmt("LET XYZ% = 5", &err);
+  *err = 0;
+  exec_stmt("LET XYZ% = 5", err);
   STR_EQ(runner, err, NULL, "LET success");
 
   STDOUT_BUF[0] = 0;
-  exec_stmt("PRINT XYZ% * 2", &err);
+  exec_stmt("PRINT XYZ% * 2", err);
   STR_EQ(runner, err, NULL, "LET then PRINT success");
   STR_EQ(runner, STDOUT_BUF, "10\n", "LET then PRINT result");
 
-  exec_stmt("LET XYZ% = XY% + 2", &err);
+  exec_stmt("LET XYZ% = XY% + 2", err);
   STR_EQ(runner, err, NULL, "re-LET success");
 
   STDOUT_BUF[0] = 0;
-  exec_stmt("PRINT XYZ%", &err);
+  exec_stmt("PRINT XYZ%", err);
   STR_EQ(runner, err, NULL, "re-LET then PRINT success");
   STR_EQ(runner, STDOUT_BUF, "7\n", "re-LET then PRINT result");
 
-  exec_stmt("LET XYZ$ = \"AB\"", &err);
+  exec_stmt("LET XYZ$ = \"AB\"", err);
   STR_EQ(runner, err, NULL, "LET XYZ$ success");
 
   STDOUT_BUF[0] = 0;
-  exec_stmt("PRINT XYZ$ + \"CD\"", &err);
+  exec_stmt("PRINT XYZ$ + \"CD\"", err);
   STR_EQ(runner, err, NULL, "PRINT XYZ$ + \"CD\" success");
   STR_EQ(runner, STDOUT_BUF, "ABCD\n", "PRINT XYZ$ + \"CD\" result");
 }
 
 void test_exec_stmt_input(test_batch_runner *runner) {
-  char const *err = NULL;
+  char err[ERR_LEN] = {0};
   strcpy(STDIN_BUF, "40\n");
   STDIN_BUF_OFFSET = 0;
   STDOUT_BUF[0] = 0;
-  exec_stmt("INPUT \"HI: \", A%", &err);
+  exec_stmt("INPUT \"HI: \", A%", err);
   STR_EQ(runner, err, NULL, "INPUT success");
   STR_EQ(runner, STDOUT_BUF, "HI: 40\n", "INPUT stdout");
 
   STDOUT_BUF[0] = 0;
-  exec_stmt("PRINT A%", &err);
+  exec_stmt("PRINT A%", err);
   STR_EQ(runner, err, NULL, "INPUT then PRINT success");
   STR_EQ(runner, STDOUT_BUF, "40\n", "INPUT then PRINT result");
 }
 
 void test_pheap(test_batch_runner *runner) {
-  char const *err = NULL;
-  add_line(10, "PRINT \"HELLO\"", &err);
+  char err[ERR_LEN] = {0};
+  add_line(10, "PRINT \"HELLO\"", err);
   STR_EQ(runner, err, NULL, "add_line 10 success");
   char line[MAX_LINE_LEN + 1];
-  int len = get_line(10, line, &err);
+  int len = get_line(10, line, err);
   STR_EQ(runner, err, NULL, "get_line 10 success");
   line[len] = 0;
   STR_EQ(runner, line, "PRINT \"HELLO\"", "get_line 10 result");

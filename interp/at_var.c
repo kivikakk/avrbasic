@@ -1,10 +1,14 @@
 #include <stdio.h>
 #include <string.h>
 #include "at_var.h"
+#include "test.h"
 
 uint8_t VHEAP[0x200];
 
-void add_var(char name[3], struct value v, char const **err) {
+const char ADD_VAR_ERR[] PROGMEM = "add_var encountered unknown var";
+const char GET_VAR_ERR[] PROGMEM = "get_var encountered unknown var";
+
+void add_var(char name[3], struct value v, char *err) {
   size_t o = 0;
 
   while (o < sizeof(VHEAP) - 5) {
@@ -21,7 +25,7 @@ void add_var(char name[3], struct value v, char const **err) {
         VHEAP[o+3] = strlen(v.as.string);
         memcpy(&VHEAP[o+4], v.as.string, VHEAP[o+3]);
       } else {
-        *err = "add_var encountered unknown var";
+        strcpy_P(err, ADD_VAR_ERR);
       }
       return;
     } else if (VHEAP[o + 2] == '%') {
@@ -29,15 +33,15 @@ void add_var(char name[3], struct value v, char const **err) {
     } else if (VHEAP[o + 2] == '$') {
       o += 4 + MAX_STRING;
     } else {
-      *err = "add_var encountered unknown var";
+      strcpy_P(err, ADD_VAR_ERR);
       return;
     }
   }
 
-  *err = "out of vheap space";
+  snprintf(err, ERR_LEN, "%s", "out of vheap space");
 }
 
-struct value get_var(char name[3], char const **err) {
+struct value get_var(char name[3], char *err) {
   struct value v;
   v.type = V_NUMBER;
   v.as.number = -32768;
@@ -45,12 +49,10 @@ struct value get_var(char name[3], char const **err) {
 
   while (o < sizeof(VHEAP) - 5) {
     if (VHEAP[o] == 0) {
-      static char GET_VAR_ERR[14];
-      snprintf(GET_VAR_ERR, sizeof(GET_VAR_ERR), "%c%c%c undefined",
+      snprintf(err, ERR_LEN, "%c%c%c undefined",
                name[0],
                name[1] ? name[1] : ' ',
                name[2]);
-      *err = GET_VAR_ERR;
       return v;
     } else if (VHEAP[o] == name[0] &&
                VHEAP[o+1] == name[1] &&
@@ -63,7 +65,7 @@ struct value get_var(char name[3], char const **err) {
         memcpy(v.as.string, &VHEAP[o+4], len);
         v.as.string[len] = 0;
       } else {
-        *err = "get_var encountered unknown var";
+        strcpy_P(err, GET_VAR_ERR);
       }
       return v;
     } else if (VHEAP[o + 2] == '%') {
@@ -71,7 +73,7 @@ struct value get_var(char name[3], char const **err) {
     } else if (VHEAP[o + 2] == '$') {
       o += 4 + MAX_STRING;
     } else {
-      *err = "get_var encountered unknown var";
+      strcpy_P(err, GET_VAR_ERR);
       return v;
     }
   }
