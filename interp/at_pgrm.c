@@ -8,8 +8,11 @@
 
 uint8_t PHEAP[0x400];
 
+char const LINE_NO_REQ_ERR[] PROGMEM = "line number required";
 char const LINE_LENGTH_ERR[] PROGMEM = "line too long";
 char const PHEAP_OVERRUN_ERR[] PROGMEM = "overran program heap";
+
+static uint16_t MIN_LINE, MAX_LINE;
 
 void add_line(uint16_t lno, char const *line, char *err) {
   size_t o = 0;
@@ -22,6 +25,11 @@ void add_line(uint16_t lno, char const *line, char *err) {
   // (uint16_t) line number
   // (uint8_t)  line length
   // (uint8_t*) line length * bytes
+
+  if (!lno) {
+    strcpy_P(err, LINE_NO_REQ_ERR);
+    return;
+  }
 
   int len = strlen(line);
   if (len > MAX_LINE_LEN) {
@@ -39,6 +47,12 @@ void add_line(uint16_t lno, char const *line, char *err) {
     strcpy_P(err, PHEAP_OVERRUN_ERR);
     return;
   }
+
+  if (!MIN_LINE || lno < MIN_LINE)
+    MIN_LINE = lno;
+
+  if (!MAX_LINE || lno > MAX_LINE)
+    MAX_LINE = lno;
 
   *(uint16_t *)&PHEAP[o] = lno;
   PHEAP[2] = len;
