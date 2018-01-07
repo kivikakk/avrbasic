@@ -232,7 +232,7 @@ int getln(char line[GETLN_LEN]) {
         c == '-' ||
         c == '"' ||
         c == '=') {
-      if (i < GETLINE_LEN) {
+      if (i < GETLN_LEN) {
         putch(c);
         flush();
         line[i] = c;

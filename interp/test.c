@@ -232,6 +232,11 @@ void test_exec_stmt_input(test_batch_runner *runner) {
   exec_stmt("INPUT \"HI: \", A%", &err);
   STR_EQ(runner, err, NULL, "INPUT success");
   STR_EQ(runner, STDOUT_BUF, "HI: 40\n", "INPUT stdout");
+
+  STDOUT_BUF[0] = 0;
+  exec_stmt("PRINT A%", &err);
+  STR_EQ(runner, err, NULL, "INPUT then PRINT success");
+  STR_EQ(runner, STDOUT_BUF, "40\n", "INPUT then PRINT result");
 }
 
 int main() {

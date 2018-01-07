@@ -214,8 +214,26 @@ void exec_stmt(char const *stmt, char const **err) {
       label[1] = accept_out[1];
     label[2] = accept_out[accept_token - 1];
 
-    char line[GETLN_LEN];
+    char line[GETLN_LEN + 1];
     int len = getln(line);
+    line[len] = 0;
+
+    struct value v;
+    if (label[2] == '%') {
+      v.type = V_NUMBER;
+      v.as.number = atoi(line);
+    } else if (label[2] == '$') {
+      v.type = V_STRING;
+      if (len > MAX_STRING)
+        len = MAX_STRING;
+      memcpy(v.as.string, line, len);
+      v.as.string[len] = 0;
+    } else {
+      *err = "INPUT encountered unknown var";
+      return;
+    }
+
+    add_var(label, v, err);
     return;
   }
 
