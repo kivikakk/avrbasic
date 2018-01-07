@@ -1,6 +1,14 @@
 #include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 #include "at_interp.h"
 #include "harness.h"
+
+char STDOUT_BUF[1024];
+
+void putstr(char const *s) {
+  strcat(STDOUT_BUF, s);
+}
 
 void test_token_type(test_batch_runner *runner) {
   INT_EQ(runner, get_token_type('A', NULL), T_LABEL, "get_token_type 'A'");
@@ -23,7 +31,7 @@ void test_tokenize(test_batch_runner *runner) {
   char const *out;
   enum token_type type;
   INT_EQ(runner, tokenize(&t, &out, &type), 3, "tokenize 1.0");
-  INT_EQ(runner, type, T_LABEL, "tokenize 1.1");
+  INT_EQ(runner, type, T_S_LET, "tokenize 1.1");
   STRN_EQ(runner, out, "LET", 3, "tokenize 1.2");
 
   INT_EQ(runner, tokenize(&t, &out, &type), 2, "tokenize 2.0");
@@ -48,7 +56,7 @@ void test_tokenize_string(test_batch_runner *runner) {
   char const *out;
   enum token_type type;
   INT_EQ(runner, tokenize(&t, &out, &type), 3, "tokenize_string 1.0");
-  INT_EQ(runner, type, T_LABEL, "tokenize_string 1.1");
+  INT_EQ(runner, type, T_S_LET, "tokenize_string 1.1");
   STRN_EQ(runner, out, "LET", 3, "tokenize_string 1.2");
 
   INT_EQ(runner, tokenize(&t, &out, &type), 2, "tokenize_string 2.0");
@@ -131,6 +139,30 @@ void test_exec_expr(test_batch_runner *runner) {
   STR_EQ(runner, err, "expected factor", "exec_expr 1 - error");
 }
 
+void test_exec_stmt_print(test_batch_runner *runner) {
+  char const *err = NULL;
+
+  STDOUT_BUF[0] = 0;
+  exec_stmt("PRINT 4+4*2", &err);
+  STR_EQ(runner, err, NULL, "PRINT success");
+  STR_EQ(runner, STDOUT_BUF, "12\n", "PRINT result");
+}
+
+void test_exec_stmt_let(test_batch_runner *runner) {
+  char const *err = NULL;
+  exec_stmt("LET", &err);
+  STR_EQ(runner, err, "unexpected symbol T_NONE, expected T_LABEL", "LET wants args");
+
+  err = NULL;
+  exec_stmt("LET XYZ = 1", &err);
+  STR_EQ(runner, err, "expected var name to end in % or $", "LET wants typed var name");
+
+  err = NULL;
+  exec_stmt("LET XYZ% = 1", &err);
+  STR_EQ(runner, err, NULL, "LET success");
+}
+
+
 int main() {
   test_batch_runner *runner = test_batch_runner_new();
 
@@ -138,6 +170,8 @@ int main() {
   test_tokenize(runner);
   test_tokenize_string(runner);
   test_exec_expr(runner);
+  test_exec_stmt_print(runner);
+  test_exec_stmt_let(runner);
 
   test_print_summary(runner);
   int retval = test_ok(runner) ? 0 : 1;

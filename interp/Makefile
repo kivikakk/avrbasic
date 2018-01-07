@@ -10,8 +10,8 @@ all: run-test
 run-test: test
 	./test
 
-test:
-	gcc -g -DTEST -o $@ $(SRCS) test.c harness.c -Wall
+test: $(SRCS) test.c harness.c
+	gcc -g -DTEST -o $@ $^ -Wall
 
 .PRECIOUS: $(TARGET)
 

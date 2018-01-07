@@ -2,10 +2,10 @@
 #include <string.h>
 #include <stdbool.h>
 #include <assert.h>
-#ifdef TEST
-#  include <stdio.h>
-#endif
+#include <stdio.h>
 #include "at_interp.h"
+
+extern void putstr(char const *s);
 
 enum token_type get_token_type(char c, enum token_type *previous) {
   if (previous && *previous == T_LABEL) {
@@ -44,8 +44,10 @@ size_t tokenize(char const **input, char const **out, enum token_type *token_typ
     ++*input;
   }
 
-  if (!**input)
+  if (!**input) {
+    *token_type_out = T_NONE;
     return 0;
+  }
 
   *out = *input;
   *token_type_out = get_token_type(**input, NULL);
@@ -60,6 +62,16 @@ size_t tokenize(char const **input, char const **out, enum token_type *token_typ
     ++*input;
   }
 
+
+  if (*token_type_out == T_LABEL) {
+    // TODO: clean up this mess
+    if (*input - *out == 3 && strncmp(*out, "LET", 3) == 0) {
+      *token_type_out = T_S_LET;
+    } else if (*input - *out == 5 && strncmp(*out, "PRINT", 5) == 0) {
+      *token_type_out = T_S_PRINT;
+    }
+  }
+
   return *input - *out;
 }
 
@@ -67,10 +79,11 @@ static char const *t, *out, *accept_out;
 static enum token_type token_type, accept_token_type;
 static size_t token, accept_token;
 
-#ifdef TEST
 static char const *tts(enum token_type tt) {
   switch (tt) {
   case T_NONE: return "T_NONE";
+  case T_S_LET: return "T_S_LET";
+  case T_S_PRINT: return "T_S_PRINT";
   case T_NUMBER: return "T_NUMBER";
   case T_LABEL: return "T_LABEL";
   case T_ADD: return "T_ADD";
@@ -81,10 +94,8 @@ static char const *tts(enum token_type tt) {
   case T_STRING: return "T_STRING";
   case T_LPAREN: return "T_LPAREN";
   case T_RPAREN: return "T_RPAREN";
-  default: return "unknown";
   }
 }
-#endif
 
 static bool nextsym(void) {
   token = tokenize(&t, &out, &token_type);
@@ -102,13 +113,13 @@ static bool accept(enum token_type tt) {
   return false;
 }
 
+static char EXPECT_ERR[80];
+
 static bool expect(enum token_type tt, char const **err) {
   if (accept(tt))
     return true;
-  *err = "unexpected symbol";
-#ifdef TEST
-  fprintf(stderr, "unexpected symbol %s, expected %s\n", tts(token_type), tts(tt));
-#endif
+  snprintf(EXPECT_ERR, sizeof(EXPECT_ERR), "unexpected symbol %s, expected %s", tts(token_type), tts(tt));
+  *err = EXPECT_ERR;
   return false;
 }
 
@@ -123,26 +134,54 @@ void exec_stmt(char const *stmt, char const **err) {
   if (!nextsym())
     return;
 
-  if (token == 3 && strncmp(out, "LET", 3) == 0) {
-    if (!nextsym()) {
-      *err = "expected token after LET";
+  if (accept(T_S_LET)) {
+    if (!expect(T_LABEL, err)) {
       return;
     }
 
-    if (token_type != T_LABEL) {
-      *err = "expected label after LET";
-      return;
-    }
+    char label[3] = {0, 0, 0};
+    label[0] = accept_out[0];
+    if (accept_token > 2)
+      label[1] = accept_out[1];
+    label[2] = accept_out[accept_token - 1];
 
-    if (!nextsym()) {
-      *err = "expected token after LET label";
+    if (label[2] != '%' && label[2] != '$') {
+      *err = "expected var name to end in % or $";
       return;
     }
 
     if (!expect(T_EQUAL, err)) {
       return;
     }
+
+    struct value v = exec_expr(err);
+    if (*err) {
+      return;
+    }
+
+    // TODO: assign var
+    return;
   }
+
+  if (accept(T_S_PRINT)) {
+    struct value v = exec_expr(err);
+    if (*err) {
+      return;
+    }
+
+    switch (v.type) {
+    case V_NUMBER: {
+      static char buf[10];
+      snprintf(buf, sizeof(buf), "%d", v.as.number);
+      putstr(buf);
+      putstr("\n");
+      break;
+    }
+    }
+    return;
+  }
+
+  *err = "invalid statement";
 }
 
 enum binop {

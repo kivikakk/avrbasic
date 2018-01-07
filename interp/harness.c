@@ -67,6 +67,10 @@ static char *write_tmp(char const *header, char const *data, size_t len) {
 
 void STR_EQ(test_batch_runner *runner, const char *got, const char *expected,
             const char *msg, ...) {
+  if (got == NULL)
+    got = "";
+  if (expected == NULL)
+    expected = "";
   int cond = strcmp(got, expected) == 0;
 
   va_list ap;

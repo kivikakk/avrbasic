@@ -5,6 +5,8 @@
 
 enum token_type {
   T_NONE,
+  T_S_LET,
+  T_S_PRINT,
   T_NUMBER,
   T_LABEL,
   T_ADD,
@@ -32,5 +34,6 @@ enum token_type get_token_type(char c, enum token_type *previous);
 size_t tokenize(char const **input, char const **out, enum token_type *token_type_out);
 void prep(char const *text);
 struct value exec_expr(char const **err);
+void exec_stmt(char const *stmt, char const **err);
 
 #endif
