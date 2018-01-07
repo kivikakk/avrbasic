@@ -5,7 +5,7 @@
 #include "harness.h"
 
 char STDOUT_BUF[1024];
-extern uint8_t VHEAP[0x1000];
+extern uint8_t VHEAP[0x400];
 
 void putstr(char const *s) {
   strcat(STDOUT_BUF, s);

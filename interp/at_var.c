@@ -1,8 +1,7 @@
 #include <stdio.h>
 #include "at_var.h"
 
-// extern uint8_t VHEAP[0x1000];
-uint8_t VHEAP[0x1000] = {0};
+uint8_t VHEAP[0x200];
 
 void add_var(char name[3], struct value v, char const **err) {
   size_t o = 0;
@@ -41,7 +40,7 @@ struct value get_var(char name[3], char const **err) {
 
   while (o < sizeof(VHEAP) - 2) {
     if (VHEAP[o] == 0) {
-      static char GET_VAR_ERR[14];
+      char GET_VAR_ERR[14];
       snprintf(GET_VAR_ERR, sizeof(GET_VAR_ERR), "%c%c%c undefined",
                name[0],
                name[1] ? name[1] : ' ',

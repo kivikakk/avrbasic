@@ -8,10 +8,9 @@
 extern void putstr(char const *s);
 
 enum token_type get_token_type(char c, enum token_type *previous) {
-  if (previous && *previous == T_LABEL) {
+  if (previous && *previous == T_LABEL)
     if ((c >= 'A' && c <= 'Z') || c == '%' || c == '$')
       return T_LABEL;
-  }
 
   if (previous && *previous == T_STRING)
     return T_STRING;
@@ -40,9 +39,8 @@ enum token_type get_token_type(char c, enum token_type *previous) {
 }
 
 size_t tokenize(char const **input, char const **out, enum token_type *token_type_out) {
-  while (**input == ' ') {
+  while (**input == ' ')
     ++*input;
-  }
 
   if (!**input) {
     *token_type_out = T_NONE;
@@ -118,7 +116,7 @@ static bool expect(enum token_type tt, char const **err) {
   if (accept(tt))
     return true;
 
-  static char EXPECT_ERR[50];
+  char EXPECT_ERR[50];
   snprintf(EXPECT_ERR, sizeof(EXPECT_ERR), "unexpected symbol %s, expected %s", tts(token_type), tts(tt));
   *err = EXPECT_ERR;
 
@@ -170,7 +168,7 @@ void exec_stmt(char const *stmt, char const **err) {
 
     switch (v.type) {
     case V_NUMBER: {
-      static char buf[10];
+      char buf[10];
       snprintf(buf, sizeof(buf), "%d", v.as.number);
       putstr(buf);
       putstr("\n");

@@ -17,7 +17,7 @@ static int Y = 0;
 static uint8_t u8x8_gpio_and_delay(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr);
 
 void init_display(void) {
-  u8g2_Setup_st7920_p_128x64_f(&u8g2, U8G2_R0, u8x8_byte_8bit_8080mode, u8x8_gpio_and_delay);
+  u8g2_Setup_st7920_p_128x64_1(&u8g2, U8G2_R0, u8x8_byte_8bit_8080mode, u8x8_gpio_and_delay);
   u8g2_InitDisplay(&u8g2);
   u8g2_SetPowerSave(&u8g2, 0);
 
@@ -138,19 +138,18 @@ static uint8_t u8x8_gpio_and_delay(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, v
 
 void flush(void)
 {
-  u8g2_ClearBuffer(&u8g2);
-  u8g2_SetFont(&u8g2, u8g2_font_profont11_tr);
-  u8g2_SetDrawColor(&u8g2, 2);
-  u8g2_SetFontMode(&u8g2, 1);
+  u8g2_FirstPage(&u8g2);
+  do {
+    u8g2_SetFont(&u8g2, u8g2_font_profont11_tr);
+    u8g2_SetDrawColor(&u8g2, 2);
+    u8g2_SetFontMode(&u8g2, 1);
 
-  for (int y = 0; y < H; ++y) {
-    for (int x = 0; x < W; ++x) {
-      u8g2_DrawGlyph(&u8g2, x * 6, y * 8 + 7, DISPLAY[y * W + x]);
-    }
-  }
-  u8g2_DrawBox(&u8g2, X * 6, Y * 8, 6, 8);
+    for (int y = 0; y < H; ++y)
+      for (int x = 0; x < W; ++x)
+        u8g2_DrawGlyph(&u8g2, x * 6, y * 8 + 7, DISPLAY[y * W + x]);
 
-  u8g2_SendBuffer(&u8g2);
+    u8g2_DrawBox(&u8g2, X * 6, Y * 8, 6, 8);
+  } while (u8g2_NextPage(&u8g2));
 }
 
 void scroll(void)
@@ -199,7 +198,13 @@ void putstr(char const *s)
 char getch(void)
 {
   while (!(UCSR0A & (1 << RXC0)));
-  return UDR0;
+  char c = UDR0;
+  if (c >= 'a' && c <= 'z') {
+    c -= 'a' - 'A';
+  }
+  while (!(UCSR0A & (1 << UDRE0)));
+  UDR0 = c;
+  return c;
 }
 
 int getline(char line[GETLINE_LEN]) {
@@ -225,14 +230,6 @@ int getline(char line[GETLINE_LEN]) {
         putch(c);
         flush();
         line[i] = c;
-        ++i;
-      }
-    } else if (c >= 'a' && c <= 'z') {
-      // For ease of debugging.
-      if (i < GETLINE_LEN) {
-        putch(c - ('a' - 'A'));
-        flush();
-        line[i] = c - ('a' - 'A');
         ++i;
       }
     } else if (c == 8) {
