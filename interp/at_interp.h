@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#define MAX_STRING 80
+#define MAX_STRING 25
 
 enum token_type {
   T_NONE,

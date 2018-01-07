@@ -154,6 +154,16 @@ void test_exec_stmt_print(test_batch_runner *runner) {
   exec_stmt("PRINT 4+4*2", &err);
   STR_EQ(runner, err, NULL, "PRINT success");
   STR_EQ(runner, STDOUT_BUF, "12\n", "PRINT result");
+
+  STDOUT_BUF[0] = 0;
+  exec_stmt("PRINT \"ABC\"", &err);
+  STR_EQ(runner, err, NULL, "PRINT \"ABC\" success");
+  STR_EQ(runner, STDOUT_BUF, "ABC\n", "PRINT \"ABC\" result");
+
+  STDOUT_BUF[0] = 0;
+  exec_stmt("PRINT \"ABC\" + \"DEF\"", &err);
+  STR_EQ(runner, err, NULL, "PRINT \"ABC\" + \"DEF\" success");
+  STR_EQ(runner, STDOUT_BUF, "ABCDEF\n", "PRINT \"ABC\" + \"DEF\" result");
 }
 
 void test_exec_stmt_let(test_batch_runner *runner) {
@@ -180,9 +190,16 @@ void test_exec_stmt_let(test_batch_runner *runner) {
   STDOUT_BUF[0] = 0;
   exec_stmt("PRINT XYZ%", &err);
   STR_EQ(runner, err, NULL, "re-LET then PRINT success");
-  STR_EQ(runner, STDOUT_BUF, "7\n", "re-LET then PRINT success");
-}
+  STR_EQ(runner, STDOUT_BUF, "7\n", "re-LET then PRINT result");
 
+  exec_stmt("LET XYZ$ = \"AB\"", &err);
+  STR_EQ(runner, err, NULL, "LET XYZ$ success");
+
+  STDOUT_BUF[0] = 0;
+  exec_stmt("PRINT XYZ$ + \"CD\"", &err);
+  STR_EQ(runner, err, NULL, "PRINT XYZ$ + \"CD\" success");
+  STR_EQ(runner, STDOUT_BUF, "ABCD\n", "PRINT XYZ$ + \"CD\" result");
+}
 
 int main() {
   test_batch_runner *runner = test_batch_runner_new();

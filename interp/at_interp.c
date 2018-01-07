@@ -225,12 +225,39 @@ static struct value outer(char const **err) {
     if (*err)
       return v;
 
+    if (v.type != v2.type) {
+      *err = "type error";
+      return v;
+    }
+
     switch (binop) {
     case T_ADD:
-      v.as.number += v2.as.number;
+      switch (v.type) {
+      case V_NUMBER:
+        v.as.number += v2.as.number;
+        break;
+      case V_STRING: {
+        int l1 = strlen(v.as.string);
+        int l2 = strlen(v2.as.string);
+        if (l1 + l2 > MAX_STRING) {
+          *err = "string too long";
+          return v;
+        }
+        strcat(v.as.string, v2.as.string);
+        break;
+      }
+      }
       break;
+
     case T_SUBTRACT:
-      v.as.number -= v2.as.number;
+      switch (v.type) {
+      case V_NUMBER:
+        v.as.number -= v2.as.number;
+        break;
+      case V_STRING:
+        *err = "type error";
+        return v;
+      }
       break;
     default:
       assert(false);
@@ -252,12 +279,31 @@ static struct value term(char const **err) {
     if (*err)
       return v;
 
+    if (v.type != v2.type) {
+      *err = "type error";
+      return v;
+    }
+
     switch (binop) {
     case T_MULTIPLY:
-      v.as.number *= v2.as.number;
+      switch (v.type) {
+      case V_NUMBER:
+        v.as.number *= v2.as.number;
+        break;
+      case V_STRING:
+        *err = "type error";
+        return v;
+      }
       break;
     case T_DIVIDE:
-      v.as.number /= v2.as.number;
+      switch (v.type) {
+      case V_NUMBER:
+        v.as.number /= v2.as.number;
+        break;
+      case V_STRING:
+        *err = "type error";
+        return v;
+      }
       break;
     default:
       assert(false);
