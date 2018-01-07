@@ -23,7 +23,7 @@ int main(void)
   UBRR0H = UBRRH_VALUE;
   UBRR0L = UBRRL_VALUE;
   UCSR0A &= ~(1 << U2X0);
-  UCSR0B = (1 << RXEN0);
+  UCSR0B = (1 << RXEN0) | (1 << TXEN0);
   UCSR0C = (1 << UCSZ01) | (1 << UCSZ00);
 
   init_display();
@@ -39,9 +39,10 @@ int main(void)
     int l = getln(line);
     line[l] = 0;
 
-    char const *err = NULL;
-    exec_stmt(line, &err);
-    if (err) {
+    char err[ERR_LEN];
+    *err = 0;
+    exec_stmt(line, err);
+    if (*err) {
       putstr("ERR: ");
       putstr(err);
       putstr("\n");

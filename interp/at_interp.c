@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include "at_interp.h"
 #include "at_var.h"
+#include "pgmspace.h"
 
 extern void putch(char c);
 extern int getln(char line[GETLN_LEN]);
@@ -103,29 +104,51 @@ static char const *t, *out, *accept_out;
 static enum token_type token_type, accept_token_type;
 static size_t token, accept_token;
 
-static char const *tts(enum token_type tt) {
+char const N_T_NONE[] PROGMEM = "T_NONE";
+char const N_T_S_LET[] PROGMEM = "T_S_LET";
+char const N_T_S_PRINT[] PROGMEM = "T_S_PRINT";
+char const N_T_S_INPUT[] PROGMEM = "T_S_INPUT";
+char const N_T_S_IF[] PROGMEM = "T_S_IF";
+char const N_T_S_THEN[] PROGMEM = "T_S_THEN";
+char const N_T_S_ELSE[] PROGMEM = "T_S_ELSE";
+char const N_T_S_ELSEIF[] PROGMEM = "T_S_ELSEIF";
+char const N_T_S_END[] PROGMEM = "T_S_END";
+char const N_T_NUMBER[] PROGMEM = "T_NUMBER";
+char const N_T_LABEL[] PROGMEM = "T_LABEL";
+char const N_T_ADD[] PROGMEM = "T_ADD";
+char const N_T_SUBTRACT[] PROGMEM = "T_SUBTRACT";
+char const N_T_MULTIPLY[] PROGMEM = "T_MULTIPLY";
+char const N_T_DIVIDE[] PROGMEM = "T_DIVIDE";
+char const N_T_EQUAL[] PROGMEM = "T_EQUAL";
+char const N_T_STRING[] PROGMEM = "T_STRING";
+char const N_T_LPAREN[] PROGMEM = "T_LPAREN";
+char const N_T_RPAREN[] PROGMEM = "T_RPAREN";
+char const N_T_COMMA[] PROGMEM = "T_COMMA";
+char const N_unknown[] PROGMEM = "unknown";
+
+static PGM_P tts(enum token_type tt) {
   switch (tt) {
-  case T_NONE: return "T_NONE";
-  case T_S_LET: return "T_S_LET";
-  case T_S_PRINT: return "T_S_PRINT";
-  case T_S_INPUT: return "T_S_INPUT";
-  case T_S_IF: return "T_S_IF";
-  case T_S_THEN: return "T_S_THEN";
-  case T_S_ELSE: return "T_S_ELSE";
-  case T_S_ELSEIF: return "T_S_ELSEIF";
-  case T_S_END: return "T_S_END";
-  case T_NUMBER: return "T_NUMBER";
-  case T_LABEL: return "T_LABEL";
-  case T_ADD: return "T_ADD";
-  case T_SUBTRACT: return "T_SUBTRACT";
-  case T_MULTIPLY: return "T_MULTIPLY";
-  case T_DIVIDE: return "T_DIVIDE";
-  case T_EQUAL: return "T_EQUAL";
-  case T_STRING: return "T_STRING";
-  case T_LPAREN: return "T_LPAREN";
-  case T_RPAREN: return "T_RPAREN";
-  case T_COMMA: return "T_COMMA";
-  default: return "unknown";
+  case T_NONE: return N_T_NONE;
+  case T_S_LET: return N_T_S_LET;
+  case T_S_PRINT: return N_T_S_PRINT;
+  case T_S_INPUT: return N_T_S_INPUT;
+  case T_S_IF: return N_T_S_IF;
+  case T_S_THEN: return N_T_S_THEN;
+  case T_S_ELSE: return N_T_S_ELSE;
+  case T_S_ELSEIF: return N_T_S_ELSEIF;
+  case T_S_END: return N_T_S_END;
+  case T_NUMBER: return N_T_NUMBER;
+  case T_LABEL: return N_T_LABEL;
+  case T_ADD: return N_T_ADD;
+  case T_SUBTRACT: return N_T_SUBTRACT;
+  case T_MULTIPLY: return N_T_MULTIPLY;
+  case T_DIVIDE: return N_T_DIVIDE;
+  case T_EQUAL: return N_T_EQUAL;
+  case T_STRING: return N_T_STRING;
+  case T_LPAREN: return N_T_LPAREN;
+  case T_RPAREN: return N_T_RPAREN;
+  case T_COMMA: return N_T_COMMA;
+  default: return N_unknown;
   }
 }
 
@@ -145,11 +168,17 @@ static bool accept(enum token_type tt) {
   return false;
 }
 
+char const UNEXPECTED1_ERR[] PROGMEM = "unexpected ";
+char const UNEXPECTED2_ERR[] PROGMEM = ", expected ";
+
 static bool expect(enum token_type tt, char *err) {
   if (accept(tt))
     return true;
 
-  snprintf(err, ERR_LEN, "unexpected %s, expected %s", tts(token_type), tts(tt));
+  strcpy_P(err, UNEXPECTED1_ERR);
+  strcat_P(err, tts(token_type));
+  strcat_P(err, UNEXPECTED2_ERR);
+  strcat_P(err, tts(tt));
   return false;
 }
 
@@ -157,6 +186,10 @@ void prep(char const *text) {
   t = text;
   nextsym();
 }
+
+const char VAR_SIGIL_ERR[] PROGMEM = "expected var name to end in % or $";
+const char INPUT_UNKNOWN_VAR_ERR[] PROGMEM = "INPUT encountered unknown var";
+const char INVALID_STMT_ERR[] PROGMEM = "invalid statement";
 
 void exec_stmt(char const *stmt, char *err) {
   t = stmt;
@@ -175,7 +208,7 @@ void exec_stmt(char const *stmt, char *err) {
     label[2] = accept_out[accept_token - 1];
 
     if (label[2] != '%' && label[2] != '$') {
-      snprintf(err, ERR_LEN, "%s", "expected var name to end in % or $");
+      strcpy_P(err, VAR_SIGIL_ERR);
       return;
     }
 
@@ -252,7 +285,7 @@ void exec_stmt(char const *stmt, char *err) {
       memcpy(v.as.string, line, len);
       v.as.string[len] = 0;
     } else {
-      snprintf(err, ERR_LEN, "%s", "INPUT encountered unknown var");
+      strcpy_P(err, INPUT_UNKNOWN_VAR_ERR);
       return;
     }
 
@@ -264,7 +297,7 @@ void exec_stmt(char const *stmt, char *err) {
     return;
   }
 
-  snprintf(err, ERR_LEN, "%s", "invalid statement");
+  strcpy_P(err, INVALID_STMT_ERR);
 }
 
 enum binop {
@@ -295,6 +328,11 @@ struct value exec_expr(char *err) {
   return v;
 }
 
+const char TYPE_ERR[] PROGMEM = "type error";
+const char STRING_LEN_ERR[] PROGMEM = "string too long";
+const char UNTERMINATED_STRING_ERR[] PROGMEM = "unterminated string";
+const char FACTOR_ERR[] PROGMEM = "expected factor";
+
 static struct value outer(char *err) {
   struct value v = term(err);
   if (*err)
@@ -308,7 +346,7 @@ static struct value outer(char *err) {
       return v;
 
     if (v.type != v2.type) {
-      snprintf(err, ERR_LEN, "%s", "type error");
+      strcpy_P(err, TYPE_ERR);
       return v;
     }
 
@@ -322,7 +360,7 @@ static struct value outer(char *err) {
         int l1 = strlen(v.as.string);
         int l2 = strlen(v2.as.string);
         if (l1 + l2 > MAX_STRING) {
-          snprintf(err, ERR_LEN, "%s", "string too long");
+          strcpy_P(err, STRING_LEN_ERR);
           return v;
         }
         strcat(v.as.string, v2.as.string);
@@ -337,7 +375,7 @@ static struct value outer(char *err) {
         v.as.number -= v2.as.number;
         break;
       case V_STRING:
-        snprintf(err, ERR_LEN, "%s", "type error");
+        strcpy_P(err, TYPE_ERR);
         return v;
       }
       break;
@@ -362,7 +400,7 @@ static struct value term(char *err) {
       return v;
 
     if (v.type != v2.type) {
-      snprintf(err, ERR_LEN, "%s", "type error");
+      strcpy_P(err, TYPE_ERR);
       return v;
     }
 
@@ -373,7 +411,7 @@ static struct value term(char *err) {
         v.as.number *= v2.as.number;
         break;
       case V_STRING:
-        snprintf(err, ERR_LEN, "%s", "type error");
+        strcpy_P(err, TYPE_ERR);
         return v;
       }
       break;
@@ -383,7 +421,7 @@ static struct value term(char *err) {
         v.as.number /= v2.as.number;
         break;
       case V_STRING:
-        snprintf(err, ERR_LEN, "%s", "type error");
+        strcpy_P(err, TYPE_ERR);
         return v;
       }
       break;
@@ -436,11 +474,15 @@ static struct value factor(char *err) {
     int len = accept_token - 2;
     if (len > MAX_STRING)
       len = MAX_STRING;
+    if (len < 0) {
+      strcpy_P(err, UNTERMINATED_STRING_ERR);
+      return v;
+    }
     memcpy(v.as.string, accept_out + 1, len);
     v.as.string[len] = 0;
     return v;
   }
 
-  snprintf(err, ERR_LEN, "%s", "expected factor");
+  strcpy_P(err, FACTOR_ERR);
   return v;
 }

@@ -231,6 +231,9 @@ void test_exec_stmt_let(test_batch_runner *runner) {
   exec_stmt("PRINT XYZ$ + \"CD\"", err);
   STR_EQ(runner, err, NULL, "PRINT XYZ$ + \"CD\" success");
   STR_EQ(runner, STDOUT_BUF, "ABCD\n", "PRINT XYZ$ + \"CD\" result");
+
+  exec_stmt("LET X$=\"", err);
+  STR_EQ(runner, err, "unterminated string", "LET X$=\" failure");
 }
 
 void test_exec_stmt_input(test_batch_runner *runner) {
