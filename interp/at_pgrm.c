@@ -40,7 +40,7 @@ void add_line(uint16_t lno, char const *line, char *err) {
   while (o + 3 + len < sizeof(PHEAP)) {
     if (*(uint16_t *)&PHEAP[o] == 0)
       break;
-    o += 1 + PHEAP[2];
+    o += 3 + PHEAP[o + 2];
   }
 
   if (o + 3 + len >= sizeof(PHEAP)) {
@@ -55,8 +55,8 @@ void add_line(uint16_t lno, char const *line, char *err) {
     MAX_LINE = lno;
 
   *(uint16_t *)&PHEAP[o] = lno;
-  PHEAP[2] = len;
-  memcpy(&PHEAP[3], line, len);
+  PHEAP[o + 2] = len;
+  memcpy(&PHEAP[o + 3], line, len);
 }
 
 int get_line(uint16_t lno, char line[MAX_LINE_LEN], char *err) {

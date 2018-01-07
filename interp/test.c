@@ -261,6 +261,23 @@ void test_pheap(test_batch_runner *runner) {
   INT_EQ(runner, len, 13, "get_line 10 length");
   line[len] = 0;
   STR_EQ(runner, line, "PRINT \"HELLO\"", "get_line 10 result");
+
+  add_line(20, "PRINT \"HI\"", err);
+  STR_EQ(runner, err, NULL, "add_line 20 success");
+  len = get_line(20, line, err);
+  STR_EQ(runner, err, NULL, "get_line 20 success");
+  INT_EQ(runner, len, 10, "get_line 20 length");
+  line[len] = 0;
+  STR_EQ(runner, line, "PRINT \"HI\"", "get_line 20 result");
+
+  add_line(10, "PRINT 2", err);
+  STR_EQ(runner, err, NULL, "add_line 10 again success");
+  len = get_line(10, line, err);
+  STR_EQ(runner, err, NULL, "get_line 10 again success");
+  INT_EQ(runner, len, 7, "get_line 10 again length");
+  line[len] = 0;
+  STR_EQ(runner, line, "PRINT 2", "get_line 10 again result");
+
 }
 
 int main() {
