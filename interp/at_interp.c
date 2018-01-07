@@ -416,6 +416,8 @@ static struct value outer(char *err);
 static struct value term(char *err);
 static struct value factor(char *err);
 
+const char TYPE_ERR[] PROGMEM = "type error";
+
 struct value exec_expr(char *err) {
   struct value v = outer(err);
   if (*err)
@@ -445,7 +447,6 @@ struct value exec_expr(char *err) {
   return v;
 }
 
-const char TYPE_ERR[] PROGMEM = "type error";
 const char STRING_LEN_ERR[] PROGMEM = "string too long";
 const char UNTERMINATED_STRING_ERR[] PROGMEM = "unterminated string";
 const char FACTOR_ERR[] PROGMEM = "expected factor";
@@ -555,11 +556,22 @@ static struct value factor(char *err) {
   v.type = V_NUMBER;
   v.as.number = -32768;
 
+  if (accept(T_SUBTRACT)) {
+    v = exec_expr(err);
+    if (*err)
+      return v;
+    if (v.type != V_NUMBER) {
+      strcpy_P(err, TYPE_ERR);
+      return v;
+    }
+    v.as.number = -v.as.number;
+    return v;
+  }
+
   if (accept(T_NUMBER)) {
     char num[40];
-    if (accept_token >= sizeof(num)) {
+    if (accept_token >= sizeof(num))
       accept_token = sizeof(num) - 1;
-    }
     strncpy(num, accept_out, accept_token);
     num[accept_token] = 0;
     v.as.number = atoi(num);
