@@ -97,6 +97,8 @@ size_t tokenize(char const **input, char const **out, enum token_type *token_typ
       *token_type_out = T_S_END;
     } else if (*input - *out == 4 && strncmp(*out, "LIST", 4) == 0) {
       *token_type_out = T_S_LIST;
+    } else if (*input - *out == 3 && strncmp(*out, "RUN", 3) == 0) {
+        *token_type_out = T_S_RUN;
     }
   }
 
@@ -117,6 +119,7 @@ char const N_T_S_ELSE[] PROGMEM = "T_S_ELSE";
 char const N_T_S_ELSEIF[] PROGMEM = "T_S_ELSEIF";
 char const N_T_S_END[] PROGMEM = "T_S_END";
 char const N_T_S_LIST[] PROGMEM = "T_S_LIST";
+char const N_T_S_RUN[] PROGMEM = "T_S_RUN";
 char const N_T_NUMBER[] PROGMEM = "T_NUMBER";
 char const N_T_LABEL[] PROGMEM = "T_LABEL";
 char const N_T_ADD[] PROGMEM = "T_ADD";
@@ -142,6 +145,7 @@ static PGM_P tts(enum token_type tt) {
   case T_S_ELSEIF: return N_T_S_ELSEIF;
   case T_S_END: return N_T_S_END;
   case T_S_LIST: return N_T_S_LIST;
+  case T_S_RUN: return N_T_S_RUN;
   case T_NUMBER: return N_T_NUMBER;
   case T_LABEL: return N_T_LABEL;
   case T_ADD: return N_T_ADD;
@@ -199,6 +203,7 @@ static void exec_stmt_print(char *err);
 static void exec_stmt_input(char *err);
 static void exec_stmt_lno(char *err);
 static void exec_stmt_list(char *err);
+static void exec_stmt_run(char *err);
 
 void exec_stmt(char const *stmt, char *err) {
   t = stmt;
@@ -228,6 +233,11 @@ void exec_stmt(char const *stmt, char *err) {
 
   if (accept(T_S_LIST)) {
     exec_stmt_list(err);
+    return;
+  }
+
+  if (accept(T_S_RUN)) {
+    exec_stmt_run(err);
     return;
   }
 
@@ -369,6 +379,28 @@ static void exec_stmt_list(char *err) {
     putstr(lineno);
     putstr(line);
     putstr("\n");
+  }
+}
+
+static void exec_stmt_run(char *err) {
+  char line[MAX_LINE_LEN + 1];
+
+  for (uint16_t lno = MIN_LINE; lno <= MAX_LINE; ++lno) {
+    int len = get_line(lno, line, err);
+    if (*err)
+      return;
+    if (!len)
+      continue;
+    line[len] = 0;
+
+    exec_stmt(line, err);
+    if (*err) {
+      putstr("ERR: at line ");
+      snprintf(line, sizeof(line), "%d", lno);
+      putstr(line);
+      putstr("\n");
+      return;
+    }
   }
 }
 
