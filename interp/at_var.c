@@ -7,7 +7,10 @@ void add_var(char name[3], struct value v, char const **err) {
   size_t o = 0;
 
   while (o < sizeof(VHEAP) - 2) {
-    if (VHEAP[o] == 0) {
+    if (VHEAP[o] == 0 ||
+        (VHEAP[o] == name[0] &&
+         VHEAP[o+1] == name[1] &&
+         VHEAP[o+2] == name[2])) {
       VHEAP[o] = name[0];
       VHEAP[o+1] = name[1];
       VHEAP[o+2] = name[2];
