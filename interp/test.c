@@ -2,12 +2,14 @@
 #include <stdio.h>
 #include <string.h>
 #include "at_interp.h"
+#include "at_pgrm.h"
 #include "harness.h"
 
 char STDOUT_BUF[1024];
 char STDIN_BUF[1024];
 size_t STDIN_BUF_OFFSET;
 extern uint8_t VHEAP[0x400];
+extern uint8_t PHEAP[0x200];
 
 void putch(char c) {
   int l = strlen(STDOUT_BUF);
@@ -246,6 +248,17 @@ void test_exec_stmt_input(test_batch_runner *runner) {
   STR_EQ(runner, STDOUT_BUF, "40\n", "INPUT then PRINT result");
 }
 
+void test_pheap(test_batch_runner *runner) {
+  char const *err = NULL;
+  add_line(10, "PRINT \"HELLO\"", &err);
+  STR_EQ(runner, err, NULL, "add_line 10 success");
+  char line[MAX_LINE_LEN + 1];
+  int len = get_line(10, line, &err);
+  STR_EQ(runner, err, NULL, "get_line 10 success");
+  line[len] = 0;
+  STR_EQ(runner, line, "PRINT \"HELLO\"", "get_line 10 result");
+}
+
 int main() {
   test_batch_runner *runner = test_batch_runner_new();
 
@@ -256,6 +269,7 @@ int main() {
   test_exec_stmt_print(runner);
   test_exec_stmt_let(runner);
   test_exec_stmt_input(runner);
+  test_pheap(runner);
 
   test_print_summary(runner);
   int retval = test_ok(runner) ? 0 : 1;
