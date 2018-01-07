@@ -231,7 +231,10 @@ int getln(char line[GETLN_LEN]) {
         c == '+' ||
         c == '-' ||
         c == '"' ||
-        c == '=') {
+        c == '=' ||
+        c == '?' ||
+        c == ':' ||
+        c == ',') {
       if (i < GETLN_LEN) {
         putch(c);
         flush();

@@ -34,6 +34,8 @@ int getln(char line[GETLN_LEN]) {
   return i;
 }
 
+void flush(void) {}
+
 void test_token_type(test_batch_runner *runner) {
   INT_EQ(runner, get_token_type('A', NULL), T_LABEL, "get_token_type 'A'");
   enum token_type label = T_LABEL;

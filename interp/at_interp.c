@@ -7,6 +7,7 @@
 
 extern void putch(char c);
 extern int getln(char line[GETLN_LEN]);
+extern void flush(void);
 
 static void putstrn(char const *s, size_t n) {
   while (n--)
@@ -195,12 +196,14 @@ void exec_stmt(char const *stmt, char const **err) {
       putstr("\n");
     }
     }
+    flush();
     return;
   }
 
   if (accept(T_S_INPUT)) {
     if (accept(T_STRING)) {
       putstrn(accept_out + 1, accept_token - 2);
+      flush();
       if (!expect(T_COMMA, err))
         return;
     }
