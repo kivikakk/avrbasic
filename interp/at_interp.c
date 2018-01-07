@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include "at_interp.h"
 #include "at_var.h"
+#include "at_pgrm.h"
 #include "pgmspace.h"
 
 extern void putch(char c);
@@ -294,6 +295,25 @@ void exec_stmt(char const *stmt, char *err) {
       return;
 
     expect(T_NONE, err);
+    return;
+  }
+
+  if (accept(T_NUMBER)) {
+    uint16_t lno = atoi(accept_out);
+    if (token_type != T_NONE) {
+      add_line(lno, out, err);
+    } else {
+      char line[MAX_LINE_LEN + 1];
+      int len = get_line(lno, line, err);
+      if (*err)
+        return;
+      line[len] = 0;
+      // HACK: we should re-snprintf `lno` probably
+      putstr(accept_out);
+      putstr(" ");
+      putstr(line);
+      putstr("\n");
+    }
     return;
   }
 
