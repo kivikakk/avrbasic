@@ -1,0 +1,1 @@
+- store program memory; maintain pointers to previous and next lines so we don't have to linear search for each (possible) next line
