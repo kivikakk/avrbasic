@@ -7,7 +7,7 @@ uint8_t VHEAP[0x200];
 void add_var(char name[3], struct value v, char const **err) {
   size_t o = 0;
 
-  while (o < sizeof(VHEAP) - 2) {
+  while (o < sizeof(VHEAP) - 5) {
     if (VHEAP[o] == 0 ||
         (VHEAP[o] == name[0] &&
          VHEAP[o+1] == name[1] &&
@@ -43,7 +43,7 @@ struct value get_var(char name[3], char const **err) {
   v.as.number = -32768;
   size_t o = 0;
 
-  while (o < sizeof(VHEAP) - 2) {
+  while (o < sizeof(VHEAP) - 5) {
     if (VHEAP[o] == 0) {
       char GET_VAR_ERR[14];
       snprintf(GET_VAR_ERR, sizeof(GET_VAR_ERR), "%c%c%c undefined",
