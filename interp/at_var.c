@@ -7,6 +7,7 @@ uint8_t VHEAP[0x200];
 
 const char ADD_VAR_ERR[] PROGMEM = "add_var encountered unknown var";
 const char GET_VAR_ERR[] PROGMEM = "get_var encountered unknown var";
+const char VHEAP_SPACE_ERR[] PROGMEM = "out of vheap space";
 
 void add_var(char name[3], struct value v, char *err) {
   size_t o = 0;
@@ -38,7 +39,7 @@ void add_var(char name[3], struct value v, char *err) {
     }
   }
 
-  snprintf(err, ERR_LEN, "%s", "out of vheap space");
+  strcpy_P(err, VHEAP_SPACE_ERR);
 }
 
 struct value get_var(char name[3], char *err) {
