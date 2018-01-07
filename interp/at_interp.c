@@ -426,7 +426,20 @@ struct value exec_expr(char *err) {
     if (*err)
       return v;
 
-    v.as.number = (v.as.number == v2.as.number);
+    if (v.type != v2.type) {
+      strcpy_P(err, TYPE_ERR);
+      return v;
+    }
+
+    switch (v.type) {
+    case V_NUMBER:
+      v.as.number = (v.as.number == v2.as.number) ? 1 : 0;
+      break;
+    case V_STRING:
+      v.type = V_NUMBER;
+      v.as.number = strcmp(v.as.string, v2.as.string) == 0 ? 1 : 0;
+      break;
+    }
   }
 
   return v;
