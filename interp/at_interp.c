@@ -83,6 +83,16 @@ size_t tokenize(char const **input, char const **out, enum token_type *token_typ
       *token_type_out = T_S_PRINT;
     } else if (*input - *out == 5 && strncmp(*out, "INPUT", 5) == 0) {
       *token_type_out = T_S_INPUT;
+    } else if (*input - *out == 2 && strncmp(*out, "IF", 2) == 0) {
+      *token_type_out = T_S_IF;
+    } else if (*input - *out == 4 && strncmp(*out, "THEN", 4) == 0) {
+      *token_type_out = T_S_THEN;
+    } else if (*input - *out == 4 && strncmp(*out, "ELSE", 4) == 0) {
+      *token_type_out = T_S_ELSE;
+    } else if (*input - *out == 6 && strncmp(*out, "ELSEIF", 6) == 0) {
+      *token_type_out = T_S_ELSEIF;
+    } else if (*input - *out == 3 && strncmp(*out, "END", 3) == 0) {
+      *token_type_out = T_S_END;
     }
   }
 
@@ -99,6 +109,11 @@ static char const *tts(enum token_type tt) {
   case T_S_LET: return "T_S_LET";
   case T_S_PRINT: return "T_S_PRINT";
   case T_S_INPUT: return "T_S_INPUT";
+  case T_S_IF: return "T_S_IF";
+  case T_S_THEN: return "T_S_THEN";
+  case T_S_ELSE: return "T_S_ELSE";
+  case T_S_ELSEIF: return "T_S_ELSEIF";
+  case T_S_END: return "T_S_END";
   case T_NUMBER: return "T_NUMBER";
   case T_LABEL: return "T_LABEL";
   case T_ADD: return "T_ADD";
