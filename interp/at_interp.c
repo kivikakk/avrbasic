@@ -5,7 +5,18 @@
 #include "at_interp.h"
 #include "at_var.h"
 
-extern void putstr(char const *s);
+extern void putch(char c);
+extern int getln(char line[GETLN_LEN]);
+
+static void putstrn(char const *s, size_t n) {
+  while (n--)
+    putch(*s++);
+}
+
+static void putstr(char const *s) {
+  while (*s)
+    putch(*s++);
+}
 
 enum token_type get_token_type(char c, enum token_type *previous) {
   if (previous && *previous == T_LABEL)
@@ -35,6 +46,8 @@ enum token_type get_token_type(char c, enum token_type *previous) {
     return T_LPAREN;
   if (c == ')')
     return T_RPAREN;
+  if (c == ',')
+    return T_COMMA;
   return T_NONE;
 }
 
@@ -67,6 +80,8 @@ size_t tokenize(char const **input, char const **out, enum token_type *token_typ
       *token_type_out = T_S_LET;
     } else if (*input - *out == 5 && strncmp(*out, "PRINT", 5) == 0) {
       *token_type_out = T_S_PRINT;
+    } else if (*input - *out == 5 && strncmp(*out, "INPUT", 5) == 0) {
+      *token_type_out = T_S_INPUT;
     }
   }
 
@@ -82,6 +97,7 @@ static char const *tts(enum token_type tt) {
   case T_NONE: return "T_NONE";
   case T_S_LET: return "T_S_LET";
   case T_S_PRINT: return "T_S_PRINT";
+  case T_S_INPUT: return "T_S_INPUT";
   case T_NUMBER: return "T_NUMBER";
   case T_LABEL: return "T_LABEL";
   case T_ADD: return "T_ADD";
@@ -92,6 +108,7 @@ static char const *tts(enum token_type tt) {
   case T_STRING: return "T_STRING";
   case T_LPAREN: return "T_LPAREN";
   case T_RPAREN: return "T_RPAREN";
+  case T_COMMA: return "T_COMMA";
   default: return "unknown";
   }
 }
@@ -116,8 +133,8 @@ static bool expect(enum token_type tt, char const **err) {
   if (accept(tt))
     return true;
 
-  char EXPECT_ERR[50];
-  snprintf(EXPECT_ERR, sizeof(EXPECT_ERR), "unexpected symbol %s, expected %s", tts(token_type), tts(tt));
+  static char EXPECT_ERR[40];
+  snprintf(EXPECT_ERR, sizeof(EXPECT_ERR), "unexpected %s, expected %s", tts(token_type), tts(tt));
   *err = EXPECT_ERR;
 
   return false;
@@ -162,9 +179,8 @@ void exec_stmt(char const *stmt, char const **err) {
 
   if (accept(T_S_PRINT)) {
     struct value v = exec_expr(err);
-    if (*err) {
+    if (*err)
       return;
-    }
 
     switch (v.type) {
     case V_NUMBER: {
@@ -179,6 +195,27 @@ void exec_stmt(char const *stmt, char const **err) {
       putstr("\n");
     }
     }
+    return;
+  }
+
+  if (accept(T_S_INPUT)) {
+    if (accept(T_STRING)) {
+      putstrn(accept_out + 1, accept_token - 2);
+      if (!expect(T_COMMA, err))
+        return;
+    }
+
+    if (!expect(T_LABEL, err))
+      return;
+
+    char label[3] = {0, 0, 0};
+    label[0] = accept_out[0];
+    if (accept_token > 2)
+      label[1] = accept_out[1];
+    label[2] = accept_out[accept_token - 1];
+
+    char line[GETLN_LEN];
+    int len = getln(line);
     return;
   }
 

@@ -28,7 +28,7 @@ int main(void)
 
   init_display();
 
-  char line[GETLINE_LEN + 1];
+  char line[GETLN_LEN + 1];
 
   putstr("AVR-BASIC\n");
   flush();
@@ -36,7 +36,7 @@ int main(void)
   while (1) {
     putstr(">");
     flush();
-    int l = getline(line);
+    int l = getln(line);
     line[l] = 0;
 
     char const *err = NULL;

@@ -7,7 +7,7 @@ void flush(void);
 void putch(char c);
 void putstr(char const *s);
 
-#define GETLINE_LEN 80
-int getline(char line[GETLINE_LEN]);
+#define GETLN_LEN 80
+int getln(char line[GETLN_LEN]);
 
 #endif

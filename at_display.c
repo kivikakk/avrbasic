@@ -189,6 +189,12 @@ void putch(char c)
   }
 }
 
+void putstrn(char const *s, size_t n)
+{
+  while (n--)
+    putch(*s++);
+}
+
 void putstr(char const *s)
 {
   while (*s)
@@ -207,7 +213,7 @@ char getch(void)
   return c;
 }
 
-int getline(char line[GETLINE_LEN]) {
+int getln(char line[GETLN_LEN]) {
   int i = 0;
 
   while (1) {

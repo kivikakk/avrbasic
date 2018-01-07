@@ -45,7 +45,7 @@ struct value get_var(char name[3], char const **err) {
 
   while (o < sizeof(VHEAP) - 5) {
     if (VHEAP[o] == 0) {
-      char GET_VAR_ERR[14];
+      static char GET_VAR_ERR[14];
       snprintf(GET_VAR_ERR, sizeof(GET_VAR_ERR), "%c%c%c undefined",
                name[0],
                name[1] ? name[1] : ' ',

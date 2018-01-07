@@ -5,10 +5,33 @@
 #include "harness.h"
 
 char STDOUT_BUF[1024];
+char STDIN_BUF[1024];
+size_t STDIN_BUF_OFFSET;
 extern uint8_t VHEAP[0x400];
 
-void putstr(char const *s) {
-  strcat(STDOUT_BUF, s);
+void putch(char c) {
+  int l = strlen(STDOUT_BUF);
+  STDOUT_BUF[l] = c;
+  STDOUT_BUF[l + 1] = 0;
+}
+
+char getch(void) {
+  return STDIN_BUF[STDIN_BUF_OFFSET++];
+}
+
+int getln(char line[GETLN_LEN]) {
+  size_t i = 0;
+  while (i < GETLN_LEN) {
+    char c = getch();
+    if (c == 10) {
+      putch(c);
+      return i;
+    } else {
+      line[i++] = c;
+      putch(c);
+    }
+  }
+  return i;
 }
 
 void test_token_type(test_batch_runner *runner) {
@@ -169,7 +192,7 @@ void test_exec_stmt_print(test_batch_runner *runner) {
 void test_exec_stmt_let(test_batch_runner *runner) {
   char const *err = NULL;
   exec_stmt("LET", &err);
-  STR_EQ(runner, err, "unexpected symbol T_NONE, expected T_LABEL", "LET wants args");
+  STR_EQ(runner, err, "unexpected T_NONE, expected T_LABEL", "LET wants args");
 
   err = NULL;
   exec_stmt("LET XYZ = 1", &err);
@@ -201,6 +224,16 @@ void test_exec_stmt_let(test_batch_runner *runner) {
   STR_EQ(runner, STDOUT_BUF, "ABCD\n", "PRINT XYZ$ + \"CD\" result");
 }
 
+void test_exec_stmt_input(test_batch_runner *runner) {
+  char const *err = NULL;
+  strcpy(STDIN_BUF, "40\n");
+  STDIN_BUF_OFFSET = 0;
+  STDOUT_BUF[0] = 0;
+  exec_stmt("INPUT \"HI: \", A%", &err);
+  STR_EQ(runner, err, NULL, "INPUT success");
+  STR_EQ(runner, STDOUT_BUF, "HI: 40\n", "INPUT stdout");
+}
+
 int main() {
   test_batch_runner *runner = test_batch_runner_new();
 
@@ -210,6 +243,7 @@ int main() {
   test_exec_expr(runner);
   test_exec_stmt_print(runner);
   test_exec_stmt_let(runner);
+  test_exec_stmt_input(runner);
 
   test_print_summary(runner);
   int retval = test_ok(runner) ? 0 : 1;

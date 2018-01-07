@@ -5,11 +5,13 @@
 #include <stdint.h>
 
 #define MAX_STRING 25
+#define GETLN_LEN 80
 
 enum token_type {
   T_NONE,
   T_S_LET,
   T_S_PRINT,
+  T_S_INPUT,
   T_NUMBER,
   T_LABEL,
   T_ADD,
@@ -20,6 +22,7 @@ enum token_type {
   T_STRING,
   T_LPAREN,
   T_RPAREN,
+  T_COMMA,
 };
 
 enum value_type {
