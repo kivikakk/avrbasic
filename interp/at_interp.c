@@ -67,6 +67,7 @@ static char const *t, *out, *accept_out;
 static enum token_type token_type, accept_token_type;
 static size_t token, accept_token;
 
+#ifdef TEST
 static char const *tts(enum token_type tt) {
   switch (tt) {
   case T_NONE: return "T_NONE";
@@ -83,6 +84,7 @@ static char const *tts(enum token_type tt) {
   default: return "unknown";
   }
 }
+#endif
 
 static bool nextsym(void) {
   token = tokenize(&t, &out, &token_type);

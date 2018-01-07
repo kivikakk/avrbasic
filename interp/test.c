@@ -129,7 +129,6 @@ void test_exec_expr(test_batch_runner *runner) {
   prep("1 -");
   value = exec_expr(&err);
   STR_EQ(runner, err, "expected factor", "exec_expr 1 - error");
-
 }
 
 int main() {

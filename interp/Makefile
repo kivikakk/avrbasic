@@ -4,18 +4,27 @@ OBJS = $(SRCS:.c=.o)
 
 include ../Makefile.common
 
-all: test
+all: run-test
 
-.PHONY: test
+.PHONY: run-test
+run-test: test
+	./test
+
 test:
 	gcc -g -DTEST -o $@ $(SRCS) test.c harness.c -Wall
-	./$@
 
 .PRECIOUS: $(TARGET)
 
 $(TARGET): $(OBJS)
 	avr-ar cru $@ $^ && avr-ranlib $@
 
+clean:
+	-rm $(TARGET) $(OBJS) test
+
 docker:
 	docker build -t avrbasic-interp $(CURDIR)
 	docker run --privileged -t -i -v $(CURDIR)/../:/src/avrbasic/ -w /src/avrbasic/interp avrbasic-interp /bin/bash
+
+docker-valgrind:
+	docker build -t avrbasic-interp $(CURDIR)
+	docker run --privileged -t -i -v $(CURDIR)/../:/src/avrbasic/ -w /src/avrbasic/interp avrbasic-interp /bin/bash -c 'rm test && make test && valgrind ./test'
