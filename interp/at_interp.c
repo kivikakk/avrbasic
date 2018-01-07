@@ -175,28 +175,36 @@ void exec_stmt(char const *stmt, char const **err) {
       return;
 
     add_var(label, v, err);
+    if (*err)
+      return;
+
+    expect(T_NONE, err);
     return;
   }
 
   if (accept(T_S_PRINT)) {
-    struct value v = exec_expr(err);
-    if (*err)
-      return;
+    do {
+      struct value v = exec_expr(err);
+      if (*err)
+        return;
 
-    switch (v.type) {
-    case V_NUMBER: {
-      char buf[10];
-      snprintf(buf, sizeof(buf), "%d", v.as.number);
-      putstr(buf);
-      putstr("\n");
-      break;
-    }
-    case V_STRING: {
-      putstr(v.as.string);
-      putstr("\n");
-    }
-    }
+      switch (v.type) {
+      case V_NUMBER: {
+        char buf[10];
+        snprintf(buf, sizeof(buf), "%d", v.as.number);
+        putstr(buf);
+        break;
+      }
+      case V_STRING: {
+        putstr(v.as.string);
+      }
+      }
+    } while (accept(T_COMMA));
+
+    putstr("\n");
     flush();
+
+    expect(T_NONE, err);
     return;
   }
 
@@ -237,6 +245,10 @@ void exec_stmt(char const *stmt, char const **err) {
     }
 
     add_var(label, v, err);
+    if (*err)
+      return;
+
+    expect(T_NONE, err);
     return;
   }
 

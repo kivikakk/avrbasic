@@ -189,6 +189,11 @@ void test_exec_stmt_print(test_batch_runner *runner) {
   exec_stmt("PRINT \"ABC\" + \"DEF\"", &err);
   STR_EQ(runner, err, NULL, "PRINT \"ABC\" + \"DEF\" success");
   STR_EQ(runner, STDOUT_BUF, "ABCDEF\n", "PRINT \"ABC\" + \"DEF\" result");
+
+  STDOUT_BUF[0] = 0;
+  exec_stmt("PRINT \"ABC\", 2*2, \"DEF\"", &err);
+  STR_EQ(runner, err, NULL, "PRINT \"ABC\", 2*2, \"DEF\" success");
+  STR_EQ(runner, STDOUT_BUF, "ABC4DEF\n", "PRINT \"ABC\", 2*2, \"DEF\" result");
 }
 
 void test_exec_stmt_let(test_batch_runner *runner) {
