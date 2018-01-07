@@ -95,6 +95,8 @@ size_t tokenize(char const **input, char const **out, enum token_type *token_typ
       *token_type_out = T_S_ELSEIF;
     } else if (*input - *out == 3 && strncmp(*out, "END", 3) == 0) {
       *token_type_out = T_S_END;
+    } else if (*input - *out == 3 && strncmp(*out, "LIST", 4) == 0) {
+      *token_type_out = T_S_LIST;
     }
   }
 
@@ -114,6 +116,7 @@ char const N_T_S_THEN[] PROGMEM = "T_S_THEN";
 char const N_T_S_ELSE[] PROGMEM = "T_S_ELSE";
 char const N_T_S_ELSEIF[] PROGMEM = "T_S_ELSEIF";
 char const N_T_S_END[] PROGMEM = "T_S_END";
+char const N_T_S_LIST[] PROGMEM = "T_S_LIST";
 char const N_T_NUMBER[] PROGMEM = "T_NUMBER";
 char const N_T_LABEL[] PROGMEM = "T_LABEL";
 char const N_T_ADD[] PROGMEM = "T_ADD";
@@ -138,6 +141,7 @@ static PGM_P tts(enum token_type tt) {
   case T_S_ELSE: return N_T_S_ELSE;
   case T_S_ELSEIF: return N_T_S_ELSEIF;
   case T_S_END: return N_T_S_END;
+  case T_S_LIST: return N_T_S_LIST;
   case T_NUMBER: return N_T_NUMBER;
   case T_LABEL: return N_T_LABEL;
   case T_ADD: return N_T_ADD;
@@ -188,9 +192,12 @@ void prep(char const *text) {
   nextsym();
 }
 
-const char VAR_SIGIL_ERR[] PROGMEM = "expected var name to end in % or $";
-const char INPUT_UNKNOWN_VAR_ERR[] PROGMEM = "INPUT encountered unknown var";
 const char INVALID_STMT_ERR[] PROGMEM = "invalid statement";
+
+static void exec_stmt_let(char *err);
+static void exec_stmt_print(char *err);
+static void exec_stmt_input(char *err);
+static void exec_stmt_lno(char *err);
 
 void exec_stmt(char const *stmt, char *err) {
   t = stmt;
@@ -199,125 +206,146 @@ void exec_stmt(char const *stmt, char *err) {
     return;
 
   if (accept(T_S_LET)) {
-    if (!expect(T_LABEL, err))
-      return;
-
-    char label[3] = {0, 0, 0};
-    label[0] = accept_out[0];
-    if (accept_token > 2)
-      label[1] = accept_out[1];
-    label[2] = accept_out[accept_token - 1];
-
-    if (label[2] != '%' && label[2] != '$') {
-      strcpy_P(err, VAR_SIGIL_ERR);
-      return;
-    }
-
-    if (!expect(T_EQUAL, err))
-      return;
-
-    struct value v = exec_expr(err);
-    if (*err)
-      return;
-
-    add_var(label, v, err);
-    if (*err)
-      return;
-
-    expect(T_NONE, err);
+    exec_stmt_let(err);
     return;
   }
 
   if (accept(T_S_PRINT)) {
-    do {
-      struct value v = exec_expr(err);
-      if (*err)
-        return;
-
-      switch (v.type) {
-      case V_NUMBER: {
-        char buf[10];
-        snprintf(buf, sizeof(buf), "%d", v.as.number);
-        putstr(buf);
-        break;
-      }
-      case V_STRING: {
-        putstr(v.as.string);
-      }
-      }
-    } while (accept(T_COMMA));
-
-    putstr("\n");
-    flush();
-
-    expect(T_NONE, err);
+    exec_stmt_print(err);
     return;
   }
 
   if (accept(T_S_INPUT)) {
-    if (accept(T_STRING)) {
-      putstrn(accept_out + 1, accept_token - 2);
-      flush();
-      if (!expect(T_COMMA, err))
-        return;
-    }
-
-    if (!expect(T_LABEL, err))
-      return;
-
-    char label[3] = {0, 0, 0};
-    label[0] = accept_out[0];
-    if (accept_token > 2)
-      label[1] = accept_out[1];
-    label[2] = accept_out[accept_token - 1];
-
-    char line[GETLN_LEN + 1];
-    int len = getln(line);
-    line[len] = 0;
-
-    struct value v;
-    if (label[2] == '%') {
-      v.type = V_NUMBER;
-      v.as.number = atoi(line);
-    } else if (label[2] == '$') {
-      v.type = V_STRING;
-      if (len > MAX_STRING)
-        len = MAX_STRING;
-      memcpy(v.as.string, line, len);
-      v.as.string[len] = 0;
-    } else {
-      strcpy_P(err, INPUT_UNKNOWN_VAR_ERR);
-      return;
-    }
-
-    add_var(label, v, err);
-    if (*err)
-      return;
-
-    expect(T_NONE, err);
+    exec_stmt_input(err);
     return;
   }
 
   if (accept(T_NUMBER)) {
-    uint16_t lno = atoi(accept_out);
-    if (token_type != T_NONE) {
-      add_line(lno, out, err);
-    } else {
-      char line[MAX_LINE_LEN + 1];
-      int len = get_line(lno, line, err);
-      if (*err)
-        return;
-      line[len] = 0;
-      // HACK: we should re-snprintf `lno` probably
-      putstr(accept_out);
-      putstr(" ");
-      putstr(line);
-      putstr("\n");
-    }
+    exec_stmt_lno(err);
     return;
   }
 
   strcpy_P(err, INVALID_STMT_ERR);
+}
+
+const char VAR_SIGIL_ERR[] PROGMEM = "expected var name to end in % or $";
+
+static void exec_stmt_let(char *err) {
+  if (!expect(T_LABEL, err))
+    return;
+
+  char label[3] = {0, 0, 0};
+  label[0] = accept_out[0];
+  if (accept_token > 2)
+    label[1] = accept_out[1];
+  label[2] = accept_out[accept_token - 1];
+
+  if (label[2] != '%' && label[2] != '$') {
+    strcpy_P(err, VAR_SIGIL_ERR);
+    return;
+  }
+
+  if (!expect(T_EQUAL, err))
+    return;
+
+  struct value v = exec_expr(err);
+  if (*err)
+    return;
+
+  add_var(label, v, err);
+  if (*err)
+    return;
+
+  expect(T_NONE, err);
+}
+
+static void exec_stmt_print(char *err) {
+  do {
+    struct value v = exec_expr(err);
+    if (*err)
+      return;
+
+    switch (v.type) {
+    case V_NUMBER: {
+      char buf[10];
+      snprintf(buf, sizeof(buf), "%d", v.as.number);
+      putstr(buf);
+      break;
+    }
+    case V_STRING: {
+      putstr(v.as.string);
+    }
+    }
+  } while (accept(T_COMMA));
+
+  putstr("\n");
+  flush();
+
+  expect(T_NONE, err);
+}
+
+const char INPUT_UNKNOWN_VAR_ERR[] PROGMEM = "INPUT encountered unknown var";
+
+static void exec_stmt_input(char *err) {
+  if (accept(T_STRING)) {
+    putstrn(accept_out + 1, accept_token - 2);
+    flush();
+    if (!expect(T_COMMA, err))
+      return;
+  }
+
+  if (!expect(T_LABEL, err))
+    return;
+
+  char label[3] = {0, 0, 0};
+  label[0] = accept_out[0];
+  if (accept_token > 2)
+    label[1] = accept_out[1];
+  label[2] = accept_out[accept_token - 1];
+
+  char line[GETLN_LEN + 1];
+  int len = getln(line);
+  line[len] = 0;
+
+  struct value v;
+  if (label[2] == '%') {
+    v.type = V_NUMBER;
+    v.as.number = atoi(line);
+  } else if (label[2] == '$') {
+    v.type = V_STRING;
+    if (len > MAX_STRING)
+      len = MAX_STRING;
+    memcpy(v.as.string, line, len);
+    v.as.string[len] = 0;
+  } else {
+    strcpy_P(err, INPUT_UNKNOWN_VAR_ERR);
+    return;
+  }
+
+  add_var(label, v, err);
+  if (*err)
+    return;
+
+  expect(T_NONE, err);
+}
+
+static void exec_stmt_lno(char *err) {
+  uint16_t lno = atoi(accept_out);
+  if (token_type != T_NONE) {
+    add_line(lno, out, err);
+    return;
+  }
+
+  char line[MAX_LINE_LEN + 1];
+  int len = get_line(lno, line, err);
+  if (*err)
+    return;
+  line[len] = 0;
+  // HACK: we should re-snprintf `lno` probably
+  putstr(accept_out);
+  putstr(" ");
+  putstr(line);
+  putstr("\n");
 }
 
 enum binop {

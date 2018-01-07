@@ -6,7 +6,7 @@
 #include "at_interp.h"
 #include "pgmspace.h"
 
-uint8_t PHEAP[0x400];
+uint8_t PHEAP[0x200];
 
 char const LINE_NO_REQ_ERR[] PROGMEM = "line number required";
 char const LINE_LENGTH_ERR[] PROGMEM = "line too long";

@@ -18,6 +18,7 @@ enum token_type {
   T_S_ELSE,
   T_S_ELSEIF,
   T_S_END,
+  T_S_LIST,
   T_NUMBER,
   T_LABEL,
   T_ADD,
