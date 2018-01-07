@@ -4,8 +4,12 @@
 #include <stdio.h>
 #include "at_pgrm.h"
 #include "at_interp.h"
+#include "pgmspace.h"
 
 uint8_t PHEAP[0x400];
+
+char const LINE_LENGTH_ERR[] PROGMEM = "line too long";
+char const PHEAP_OVERRUN_ERR[] PROGMEM = "overran program heap";
 
 void add_line(uint16_t lno, char const *line, char *err) {
   size_t o = 0;
@@ -21,7 +25,7 @@ void add_line(uint16_t lno, char const *line, char *err) {
 
   int len = strlen(line);
   if (len > MAX_LINE_LEN) {
-    snprintf(err, ERR_LEN, "%s", "line too long");
+    strcpy_P(err, LINE_LENGTH_ERR);
     return;
   }
 
@@ -32,7 +36,7 @@ void add_line(uint16_t lno, char const *line, char *err) {
   }
 
   if (o + 3 + len >= sizeof(PHEAP)) {
-    snprintf(err, ERR_LEN, "%s", "overran program heap");
+    strcpy_P(err, PHEAP_OVERRUN_ERR);
     return;
   }
 

@@ -1,5 +1,5 @@
-#ifndef TEST_H
-#define TEST_H
+#ifndef PGMSPACE_H
+#define PGMSPACE_H
 
 #ifdef TEST
 #  define PROGMEM
