@@ -10,7 +10,7 @@
 
 #include "at_main.h"
 #include "at_display.h"
-#include "at_exec.h"
+#include "interp/at_interp.h"
 #include "u8g2.h"
 
 #include <avr/avr_mcu_section.h>
@@ -39,7 +39,13 @@ int main(void)
     int l = getline(line);
     line[l] = 0;
 
-    exec(line);
+    char const *err = NULL;
+    exec_stmt(line, &err);
+    if (err) {
+      putstr("ERR: ");
+      putstr(err);
+      putstr("\n");
+    }
   }
 
   return 0;

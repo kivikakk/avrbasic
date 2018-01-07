@@ -1,6 +1,7 @@
 #ifndef AT_INTERP_H
 #define AT_INTERP_H
 
+#include <stdlib.h>
 #include <stdint.h>
 
 enum token_type {

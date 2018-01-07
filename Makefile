@@ -40,4 +40,5 @@ flash: all
 	avrdude -c usbtiny -p atmega328p -U flash:w:$(TARGET:.elf=.hex) -B 1
 
 clean:
-	rm -rf *.a *.axf *.o *.hex
+	-rm -rf *.a *.axf *.o *.hex
+	-$(MAKE) -C interp clean

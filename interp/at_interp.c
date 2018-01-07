@@ -1,9 +1,9 @@
-#include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 #include <assert.h>
 #include <stdio.h>
 #include "at_interp.h"
+#include "at_var.h"
 
 extern void putstr(char const *s);
 
@@ -94,6 +94,7 @@ static char const *tts(enum token_type tt) {
   case T_STRING: return "T_STRING";
   case T_LPAREN: return "T_LPAREN";
   case T_RPAREN: return "T_RPAREN";
+  default: return "unknown";
   }
 }
 
@@ -135,9 +136,8 @@ void exec_stmt(char const *stmt, char const **err) {
     return;
 
   if (accept(T_S_LET)) {
-    if (!expect(T_LABEL, err)) {
+    if (!expect(T_LABEL, err))
       return;
-    }
 
     char label[3] = {0, 0, 0};
     label[0] = accept_out[0];
@@ -150,16 +150,14 @@ void exec_stmt(char const *stmt, char const **err) {
       return;
     }
 
-    if (!expect(T_EQUAL, err)) {
+    if (!expect(T_EQUAL, err))
       return;
-    }
 
     struct value v = exec_expr(err);
-    if (*err) {
+    if (*err)
       return;
-    }
 
-    // TODO: assign var
+    add_var(label, v);
     return;
   }
 
