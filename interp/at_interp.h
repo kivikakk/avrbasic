@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#define MAX_STRING 80
+
 enum token_type {
   T_NONE,
   T_S_LET,
@@ -22,12 +24,14 @@ enum token_type {
 
 enum value_type {
   V_NUMBER,
+  V_STRING,
 };
 
 struct value {
   enum value_type type;
   union {
     int16_t number;
+    char string[MAX_STRING + 1];
   } as;
 };
 

@@ -174,6 +174,10 @@ void exec_stmt(char const *stmt, char const **err) {
       putstr("\n");
       break;
     }
+    case V_STRING: {
+      putstr(v.as.string);
+      putstr("\n");
+    }
     }
     return;
   }
@@ -300,6 +304,16 @@ static struct value factor(char const **err) {
     return v;
   }
 
-  *err = "expected factor, label or LPAREN";
+  if (accept(T_STRING)) {
+    v.type = V_STRING;
+    int len = accept_token - 2;
+    if (len > MAX_STRING)
+      len = MAX_STRING;
+    memcpy(v.as.string, accept_out + 1, len);
+    v.as.string[len] = 0;
+    return v;
+  }
+
+  *err = "expected factor";
   return v;
 }

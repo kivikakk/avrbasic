@@ -137,7 +137,14 @@ void test_exec_expr(test_batch_runner *runner) {
   INT_EQ(runner, (int)err, 0, "no errors");
   prep("1 -");
   value = exec_expr(&err);
-  STR_EQ(runner, err, "expected factor, label or LPAREN", "exec_expr 1 - error");
+  STR_EQ(runner, err, "expected factor", "exec_expr 1 - error");
+
+  err = NULL;
+  prep("\"ABC\"");
+  value = exec_expr(&err);
+  INT_EQ(runner, value.type, V_STRING, "exec_expc \"ABC\" value.type");
+  STR_EQ(runner, value.as.string, "ABC", "exec_expc \"ABC\" value.as.string");
+  STR_EQ(runner, err, NULL, "exec_expr \"ABC\" err");
 }
 
 void test_exec_stmt_print(test_batch_runner *runner) {
