@@ -166,6 +166,14 @@ void test_exec_stmt_let(test_batch_runner *runner) {
   exec_stmt("PRINT XYZ% * 2", &err);
   STR_EQ(runner, err, NULL, "LET then PRINT success");
   STR_EQ(runner, STDOUT_BUF, "10\n", "LET then PRINT result");
+
+  exec_stmt("LET XYZ% = XY% + 2", &err);
+  STR_EQ(runner, err, NULL, "re-LET success");
+
+  STDOUT_BUF[0] = 0;
+  exec_stmt("PRINT XYZ%", &err);
+  STR_EQ(runner, err, NULL, "re-LET then PRINT success");
+  STR_EQ(runner, STDOUT_BUF, "7\n", "re-LET then PRINT success");
 }
 
 
