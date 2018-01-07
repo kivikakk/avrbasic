@@ -46,6 +46,20 @@ void add_line(uint16_t lno, char const *line, char *err) {
 }
 
 int get_line(uint16_t lno, char line[MAX_LINE_LEN], char *err) {
-  snprintf(err, ERR_LEN, "%s", "unimpl");
-  return 0;
+  size_t o = 0, p = -1;
+
+  while (o + 3 < sizeof(PHEAP)) {
+    if (*(uint16_t *)&PHEAP[o] == lno)
+      p = o;
+    if (*(uint16_t *)&PHEAP[o] == 0)
+      break;
+    o += 3 + PHEAP[o + 2];
+  }
+
+  if (p == -1)
+    return 0;
+
+  int len = PHEAP[p + 2];
+  memcpy(line, &PHEAP[p + 3], len);
+  return len;
 }

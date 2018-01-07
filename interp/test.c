@@ -258,6 +258,7 @@ void test_pheap(test_batch_runner *runner) {
   char line[MAX_LINE_LEN + 1];
   int len = get_line(10, line, err);
   STR_EQ(runner, err, NULL, "get_line 10 success");
+  INT_EQ(runner, len, 13, "get_line 10 length");
   line[len] = 0;
   STR_EQ(runner, line, "PRINT \"HELLO\"", "get_line 10 result");
 }
