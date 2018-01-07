@@ -1,5 +1,7 @@
 # avrbasic
-A BASIC implementation for the ATmega328p.
+An interactive BASIC interpreter for the ATmega328p.
+
+Re-live your TRS-80 memories with your ATmega. Maybe.
 
 ![](running.jpg)
 
