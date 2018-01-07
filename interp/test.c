@@ -5,6 +5,7 @@
 #include "harness.h"
 
 char STDOUT_BUF[1024];
+extern uint8_t VHEAP[0x1000];
 
 void putstr(char const *s) {
   strcat(STDOUT_BUF, s);
@@ -136,7 +137,7 @@ void test_exec_expr(test_batch_runner *runner) {
   INT_EQ(runner, (int)err, 0, "no errors");
   prep("1 -");
   value = exec_expr(&err);
-  STR_EQ(runner, err, "expected factor", "exec_expr 1 - error");
+  STR_EQ(runner, err, "expected factor, label or LPAREN", "exec_expr 1 - error");
 }
 
 void test_exec_stmt_print(test_batch_runner *runner) {
@@ -158,8 +159,13 @@ void test_exec_stmt_let(test_batch_runner *runner) {
   STR_EQ(runner, err, "expected var name to end in % or $", "LET wants typed var name");
 
   err = NULL;
-  exec_stmt("LET XYZ% = 1", &err);
+  exec_stmt("LET XYZ% = 5", &err);
   STR_EQ(runner, err, NULL, "LET success");
+
+  STDOUT_BUF[0] = 0;
+  exec_stmt("PRINT XYZ% * 2", &err);
+  STR_EQ(runner, err, NULL, "LET then PRINT success");
+  STR_EQ(runner, STDOUT_BUF, "10\n", "LET then PRINT result");
 }
 
 

@@ -114,13 +114,14 @@ static bool accept(enum token_type tt) {
   return false;
 }
 
-static char EXPECT_ERR[80];
-
 static bool expect(enum token_type tt, char const **err) {
   if (accept(tt))
     return true;
+
+  static char EXPECT_ERR[50];
   snprintf(EXPECT_ERR, sizeof(EXPECT_ERR), "unexpected symbol %s, expected %s", tts(token_type), tts(tt));
   *err = EXPECT_ERR;
+
   return false;
 }
 
@@ -157,7 +158,7 @@ void exec_stmt(char const *stmt, char const **err) {
     if (*err)
       return;
 
-    add_var(label, v);
+    add_var(label, v, err);
     return;
   }
 
@@ -286,6 +287,21 @@ static struct value factor(char const **err) {
     return v;
   }
 
-  *err = "expected factor";
+  if (accept(T_LABEL)) {
+    char label[3] = {0, 0, 0};
+    label[0] = accept_out[0];
+    if (accept_token > 2)
+      label[1] = accept_out[1];
+    label[2] = accept_out[accept_token - 1];
+
+    v = get_var(label, err);
+    if (*err) {
+      return v;
+    }
+
+    return v;
+  }
+
+  *err = "expected factor, label or LPAREN";
   return v;
 }
