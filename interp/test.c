@@ -302,6 +302,34 @@ void test_pheap(test_batch_runner *runner) {
   STR_EQ(runner, STDOUT_BUF, "20 PRINT 8\n", "20 result");
 }
 
+static void exec(test_batch_runner *runner, char const *code) {
+  char line[GETLN_LEN + 1];
+  char err[ERR_LEN] = {0};
+
+  while (*code) {
+    char *nl = strchr(code, '\n');
+    if (!nl)
+      break;
+    size_t len = nl - code;
+    if (len > GETLN_LEN)
+      len = GETLN_LEN;
+    memcpy(line, code, len);
+    line[len] = 0;
+    exec_stmt(line, err);
+    STR_EQ(runner, err, NULL, "exec success");
+    code = nl + 1;
+  }
+}
+
+void test_list(test_batch_runner *runner) {
+  STDOUT_BUF[0] = 0;
+  exec(runner,
+       "10 PRINT 42\n"
+       "20 GOTO 10\n"
+       "LIST\n");
+  STR_EQ(runner, STDOUT_BUF, "10 PRINT 42\n20 GOTO 10\n", "test_list");
+}
+
 int main() {
   init_pheap();
 
@@ -315,6 +343,7 @@ int main() {
   test_exec_stmt_let(runner);
   test_exec_stmt_input(runner);
   test_pheap(runner);
+  test_list(runner);
 
   test_print_summary(runner);
   int retval = test_ok(runner) ? 0 : 1;

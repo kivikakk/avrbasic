@@ -209,6 +209,17 @@ static void exec_stmt_lno(char *err);
 static void exec_stmt_list(char *err);
 static void exec_stmt_run(char *err);
 static void exec_stmt_goto(char *err);
+static void exec_stmt_if(char *err);
+static void exec_stmt_elseif(char *err);
+static void exec_stmt_else(char *err);
+static void exec_stmt_end(char *err);
+
+enum if_status {
+  OUT,
+  PRE,
+  MID,
+  POST,
+} IF_STATUS;
 
 void exec_stmt(char const *stmt, char *err) {
   t = stmt;
@@ -248,6 +259,26 @@ void exec_stmt(char const *stmt, char *err) {
 
   if (accept(T_S_GOTO)) {
     exec_stmt_goto(err);
+    return;
+  }
+
+  if (accept(T_S_IF)) {
+    exec_stmt_if(err);
+    return;
+  }
+
+  if (accept(T_S_ELSEIF)) {
+    exec_stmt_elseif(err);
+    return;
+  }
+
+  if (accept(T_S_ELSE)) {
+    exec_stmt_else(err);
+    return;
+  }
+
+  if (accept(T_S_END)) {
+    exec_stmt_end(err);
     return;
   }
 
@@ -392,13 +423,13 @@ static void exec_stmt_list(char *err) {
   }
 }
 
-static uint16_t run_lno;
+static uint16_t RUN_LNO;
 
 static void exec_stmt_run(char *err) {
   char line[MAX_LINE_LEN + 1];
 
-  for (run_lno = MIN_LINE; run_lno <= MAX_LINE; ++run_lno) {
-    int len = get_line(run_lno, line, err);
+  for (RUN_LNO = MIN_LINE; RUN_LNO <= MAX_LINE; ++RUN_LNO) {
+    int len = get_line(RUN_LNO, line, err);
     if (*err)
       return;
     if (!len)
@@ -408,7 +439,7 @@ static void exec_stmt_run(char *err) {
     exec_stmt(line, err);
     if (*err) {
       putstr("ERR: at line ");
-      snprintf(line, sizeof(line), "%d", run_lno);
+      snprintf(line, sizeof(line), "%d", RUN_LNO);
       putstr(line);
       putstr("\n");
       putstr(err);
@@ -422,7 +453,23 @@ static void exec_stmt_goto(char *err) {
   if (!expect(T_NUMBER, err))
     return;
 
-  run_lno = atoi(accept_out) - 1;
+  RUN_LNO = atoi(accept_out) - 1;
+}
+
+static void exec_stmt_if(char *err) {
+  
+}
+
+static void exec_stmt_elseif(char *err) {
+  
+}
+
+static void exec_stmt_else(char *err) {
+  
+}
+
+static void exec_stmt_end(char *err) {
+  
 }
 
 enum binop {

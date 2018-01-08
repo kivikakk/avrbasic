@@ -58,6 +58,7 @@ int main(int argc, char **argv) {
       memcpy(line, buf, r);
       for (size_t i = 0; i < r; ++i)
         line[i] = toupper(line[i]);
+      line[r] = 0;
 
       *err = 0;
       exec_stmt(line, err);

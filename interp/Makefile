@@ -26,7 +26,7 @@ $(TARGET): $(OBJS)
 	avr-ar cru $@ $^ && avr-ranlib $@
 
 clean:
-	-rm $(TARGET) $(OBJS) test
+	-rm $(TARGET) $(OBJS) test local
 
 docker:
 	docker build -t avrbasic-interp $(CURDIR)
