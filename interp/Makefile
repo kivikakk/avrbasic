@@ -6,6 +6,11 @@ include ../Makefile.common
 
 all: run-test
 
+.PHONY: local
+local: $(SRCS) local.c
+	gcc -DTEST -g -o $@ $^ -Wall
+	./local
+
 .PHONY: run-test
 run-test: test
 	./test

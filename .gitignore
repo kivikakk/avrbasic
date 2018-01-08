@@ -3,4 +3,5 @@
 *.hex
 *.a
 interp/test
+interp/local
 *.dSYM
