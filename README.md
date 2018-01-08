@@ -31,6 +31,12 @@ Language description:
   * `LET label = expr` — assign a variable
   * `PRINT expr[, expr …]` — output any expression
   * `INPUT ["MESSAGE",] label` — get user input
+  * `IF expr THEN` — start executing code only if expr is a non-zero integer or non-empty string
+  * `ELSEIF expr THEN` — during an IF, if a previous block has not executed, start executing code if expr evaluates as above
+  * `ELSE` — during an IF/ELSEIF, if no previous block has executed, start executing code
+  * `END IF` — end an IF/ELSEIF
   * `[number] stmt` — store program code at the given line number
-  * `LIST` — list stored program code
+  * `GOTO number` — transfer program control to given line during `RUN`
   * `RUN` — run stored program
+  * `LIST` — list stored program code
+  * `CLEAR` – erase stored program (use if pheap runs out)
