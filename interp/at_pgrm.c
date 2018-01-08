@@ -44,15 +44,18 @@ struct pheap_entry_occupied *find_line(uint16_t lno) {
 
   struct pheap_entry *pheap = (struct pheap_entry *)PHEAP;
 
-  do {
+  while (1) {
     if (pheap->occupied) {
       struct pheap_entry_occupied *occupied = (struct pheap_entry_occupied *)pheap;
       if (occupied->lno == lno)
         return occupied;
     }
 
+    if (pheap->last)
+      break;
+
     pheap = (struct pheap_entry *)((uint8_t *)pheap + sizeof(struct pheap_entry) + pheap->length);
-  } while (!pheap->last);
+  };
 
   return NULL;
 }

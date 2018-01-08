@@ -324,6 +324,7 @@ static void exec(test_batch_runner *runner, char const *code) {
 void test_list(test_batch_runner *runner) {
   STDOUT_BUF[0] = 0;
   exec(runner,
+       "CLEAR\n"
        "10 PRINT 42\n"
        "20 GOTO 10\n"
        "LIST\n");
@@ -333,6 +334,7 @@ void test_list(test_batch_runner *runner) {
 void test_goto(test_batch_runner *runner) {
   STDOUT_BUF[0] = 0;
   exec(runner,
+       "CLEAR\n"
        "10 GOTO 30\n"
        "20 PRINT 1\n"
        "30 PRINT 2\n"
@@ -342,6 +344,33 @@ void test_goto(test_batch_runner *runner) {
        "70 GOTO 50\n"
        "RUN\n");
   STR_EQ(runner, STDOUT_BUF, "2\n3\n", "test_goto");
+}
+
+void test_ite(test_batch_runner *runner) {
+  STDOUT_BUF[0] = 0;
+  exec(runner,
+       "CLEAR\n"
+       "10  IF 1 = 1 THEN\n"
+       "20    PRINT \"YES\"\n"
+       "30  ELSE\n"
+       "40    PRINT \"NO\"\n"
+       "50  END IF\n"
+       "60  IF 0 = 1 THEN\n"
+       "70    PRINT \"NO\"\n"
+       "80  ELSEIF 1 = 1 THEN\n"
+       "90    PRINT \"YES\"\n"
+       "100 ELSE\n"
+       "110   PRINT \"NO\"\n"
+       "120 END IF\n"
+       "130 IF 0 = 1 THEN\n"
+       "140   PRINT \"NO\"\n"
+       "150 ELSEIF 0 THEN\n"
+       "160   PRINT \"NO\"\n"
+       "170 ELSE\n"
+       "180   PRINT \"YES\"\n"
+       "190 END IF\n"
+       "RUN\n");
+  STR_EQ(runner, STDOUT_BUF, "YES\nYES\nYES\n", "test_ite");
 }
 
 int main() {
@@ -359,6 +388,7 @@ int main() {
   test_pheap(runner);
   test_list(runner);
   test_goto(runner);
+  test_ite(runner);
 
   test_print_summary(runner);
   int retval = test_ok(runner) ? 0 : 1;

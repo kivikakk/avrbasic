@@ -21,6 +21,7 @@ enum token_type {
   T_S_LIST,
   T_S_RUN,
   T_S_GOTO,
+  T_S_CLEAR,
   T_NUMBER,
   T_LABEL,
   T_ADD,

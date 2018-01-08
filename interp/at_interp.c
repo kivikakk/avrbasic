@@ -101,6 +101,8 @@ size_t tokenize(char const **input, char const **out, enum token_type *token_typ
       *token_type_out = T_S_RUN;
     } else if (*input - *out == 4 && strncmp(*out, "GOTO", 4) == 0) {
       *token_type_out = T_S_GOTO;
+    } else if (*input - *out == 5 && strncmp(*out, "CLEAR", 5) == 0) {
+      *token_type_out = T_S_CLEAR;
     }
   }
 
@@ -123,6 +125,7 @@ char const N_T_S_END[] PROGMEM = "T_S_END";
 char const N_T_S_LIST[] PROGMEM = "T_S_LIST";
 char const N_T_S_RUN[] PROGMEM = "T_S_RUN";
 char const N_T_S_GOTO[] PROGMEM = "T_S_GOTO";
+char const N_T_S_CLEAR[] PROGMEM = "T_S_CLEAR";
 char const N_T_NUMBER[] PROGMEM = "T_NUMBER";
 char const N_T_LABEL[] PROGMEM = "T_LABEL";
 char const N_T_ADD[] PROGMEM = "T_ADD";
@@ -150,6 +153,7 @@ static PGM_P tts(enum token_type tt) {
   case T_S_LIST: return N_T_S_LIST;
   case T_S_RUN: return N_T_S_RUN;
   case T_S_GOTO: return N_T_S_GOTO;
+  case T_S_CLEAR: return N_T_S_CLEAR;
   case T_NUMBER: return N_T_NUMBER;
   case T_LABEL: return N_T_LABEL;
   case T_ADD: return N_T_ADD;
@@ -213,6 +217,7 @@ static void exec_stmt_if(char *err);
 static void exec_stmt_elseif(char *err);
 static void exec_stmt_else(char *err);
 static void exec_stmt_end(char *err);
+static void exec_stmt_clear(char *err);
 
 enum if_status {
   OUT,
@@ -279,6 +284,11 @@ void exec_stmt(char const *stmt, char *err) {
 
   if (accept(T_S_END)) {
     exec_stmt_end(err);
+    return;
+  }
+
+  if (accept(T_S_CLEAR)) {
+    exec_stmt_clear(err);
     return;
   }
 
@@ -457,7 +467,19 @@ static void exec_stmt_goto(char *err) {
 }
 
 static void exec_stmt_if(char *err) {
-  
+  struct value v = exec_expr(err);
+  if (*err)
+    return;
+
+  if (!expect(T_S_THEN, err))
+    return;
+
+  switch (v.type) {
+  case V_NUMBER:
+    break;
+  case V_STRING:
+    break;
+  }
 }
 
 static void exec_stmt_elseif(char *err) {
@@ -470,6 +492,10 @@ static void exec_stmt_else(char *err) {
 
 static void exec_stmt_end(char *err) {
   
+}
+
+static void exec_stmt_clear(char *err) {
+  init_pheap();
 }
 
 enum binop {
