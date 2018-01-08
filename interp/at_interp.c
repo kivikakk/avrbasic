@@ -232,6 +232,24 @@ void exec_stmt(char const *stmt, char *err) {
   if (!nextsym())
     return;
 
+  if (accept(T_S_ELSEIF)) {
+    exec_stmt_elseif(err);
+    return;
+  }
+
+  if (accept(T_S_ELSE)) {
+    exec_stmt_else(err);
+    return;
+  }
+
+  if (accept(T_S_END)) {
+    exec_stmt_end(err);
+    return;
+  }
+
+  if (IF_STATUS[0] != OUT && IF_STATUS[0] != MID)
+    return;
+
   if (accept(T_S_LET)) {
     exec_stmt_let(err);
     return;
@@ -269,21 +287,6 @@ void exec_stmt(char const *stmt, char *err) {
 
   if (accept(T_S_IF)) {
     exec_stmt_if(err);
-    return;
-  }
-
-  if (accept(T_S_ELSEIF)) {
-    exec_stmt_elseif(err);
-    return;
-  }
-
-  if (accept(T_S_ELSE)) {
-    exec_stmt_else(err);
-    return;
-  }
-
-  if (accept(T_S_END)) {
-    exec_stmt_end(err);
     return;
   }
 
@@ -474,24 +477,75 @@ static void exec_stmt_if(char *err) {
   if (!expect(T_S_THEN, err))
     return;
 
+  bool cond;
+
   switch (v.type) {
   case V_NUMBER:
+    cond = v.as.number != 0;
     break;
   case V_STRING:
+    cond = *v.as.string != 0;
     break;
   }
+
+  if (cond)
+    IF_STATUS[0] = MID;
+  else
+    IF_STATUS[0] = PRE;
 }
 
 static void exec_stmt_elseif(char *err) {
-  
+  if (IF_STATUS[0] == MID) {
+    IF_STATUS[0] = POST;
+    return;
+  } else if (IF_STATUS[0] == POST) {
+    return;
+  }
+
+  struct value v = exec_expr(err);
+  if (*err)
+    return;
+
+  if (!expect(T_S_THEN, err))
+    return;
+
+  bool cond;
+
+  switch (v.type) {
+  case V_NUMBER:
+    cond = v.as.number != 0;
+    break;
+  case V_STRING:
+    cond = *v.as.string != 0;
+    break;
+  }
+
+  if (cond)
+    IF_STATUS[0] = MID;
+  else
+    IF_STATUS[0] = PRE;
 }
 
 static void exec_stmt_else(char *err) {
-  
+  if (IF_STATUS[0] == MID)
+    IF_STATUS[0] = POST;
+  else if (IF_STATUS[0] == PRE)
+    IF_STATUS[0] = MID;
 }
 
 static void exec_stmt_end(char *err) {
-  
+  if (accept(T_S_IF)) {
+    IF_STATUS[0] = OUT;
+
+    expect(T_NONE, err);
+    return;
+  }
+
+  if (IF_STATUS[0] != OUT && IF_STATUS[0] != MID)
+    return;
+
+  RUN_LNO = MAX_LINE + 1;
+  expect(T_NONE, err);
 }
 
 static void exec_stmt_clear(char *err) {
