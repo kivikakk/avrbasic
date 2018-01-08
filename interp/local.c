@@ -20,6 +20,7 @@ int getln(char line[GETLN_LEN]) {
   ssize_t r = getline(&l, &sz, stdin);
   if (r == -1) {
     putch('\n');
+    free(l);
     exit(0);
   }
   if (r > GETLN_LEN)
