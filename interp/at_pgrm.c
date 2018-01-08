@@ -71,6 +71,19 @@ struct pheap_entry *find_gap(uint16_t sz) {
   return NULL;
 }
 
+void remove_entry(struct pheap_entry *entry) {
+  entry->occupied = 0;
+  if (entry->last)
+    return;
+
+  struct pheap_entry *next = (struct pheap_entry *)((uint8_t *)entry + sizeof(struct pheap_entry) + entry->length);
+  if (next->occupied)
+    return;
+
+  entry->last = next->last;
+  entry->length += next->length + sizeof(struct pheap_entry);
+}
+
 void add_line(uint16_t lno, char const *line, char *err) {
   if (!lno) {
     strcpy_P(err, LINE_NO_REQ_ERR);
@@ -83,8 +96,10 @@ void add_line(uint16_t lno, char const *line, char *err) {
     return;
   }
 
-  struct pheap_entry_occupied *extant = find_line(lno),
-    *target;
+  struct pheap_entry_occupied *extant, *target;
+
+start:
+  extant = find_line(lno);
 
   if (!extant) {
     struct pheap_entry *gap =
@@ -114,9 +129,9 @@ void add_line(uint16_t lno, char const *line, char *err) {
       // yes.
       target = extant;
     } else {
-      // no.
-      strcpy_P(err, PHEAP_OVERRUN_ERR);
-      return;
+      // no. deallocate, aggregate and try insert.
+      remove_entry(&extant->entry);
+      goto start;
     }
   }
 
