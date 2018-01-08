@@ -2,6 +2,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "at_interp.h"
+#include "at_pgrm.h"
 
 void putch(char c) {
   putc(c, stdout);
@@ -37,6 +38,7 @@ void flush(void) {}
 int main(int argc, char **argv) {
   char line[GETLN_LEN + 1];
   printf("AVR-BASIC\n");
+  init_pheap();
 
   while (1) {
     putstr(">");

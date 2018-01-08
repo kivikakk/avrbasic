@@ -11,6 +11,7 @@
 #include "at_main.h"
 #include "at_display.h"
 #include "interp/at_interp.h"
+#include "interp/at_pgrm.h"
 #include "u8g2.h"
 
 #include <avr/avr_mcu_section.h>
@@ -27,6 +28,7 @@ int main(void)
   UCSR0C = (1 << UCSZ01) | (1 << UCSZ00);
 
   init_display();
+  init_pheap();
 
   char line[GETLN_LEN + 1];
 

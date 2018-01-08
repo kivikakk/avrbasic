@@ -303,6 +303,8 @@ void test_pheap(test_batch_runner *runner) {
 }
 
 int main() {
+  init_pheap();
+
   test_batch_runner *runner = test_batch_runner_new();
 
   test_token_type(runner);

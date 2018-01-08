@@ -14,18 +14,65 @@ char const PHEAP_OVERRUN_ERR[] PROGMEM = "overran program heap";
 
 uint16_t MIN_LINE, MAX_LINE;
 
+struct pheap_entry {
+  union {
+    struct {
+      unsigned last : 1;
+      unsigned occupied : 1;
+    };
+    uint8_t _flags;
+  };
+  uint16_t length;
+} __attribute__((__packed__));
+
+struct pheap_entry_occupied {
+  struct pheap_entry entry;
+  uint16_t lno;
+  uint8_t llen;
+} __attribute__((__packed__));
+
+void init_pheap(void) {
+  struct pheap_entry *pheap = (struct pheap_entry *)PHEAP;
+  pheap->occupied = 0;
+  pheap->last = 1;
+  pheap->length = 0x200 - sizeof(struct pheap_entry);
+}
+
+struct pheap_entry_occupied *find_line(uint16_t lno) {
+  if (!MIN_LINE || lno < MIN_LINE || lno > MAX_LINE)
+    return NULL;
+
+  // search for existing line
+  struct pheap_entry *pheap = (struct pheap_entry *)PHEAP;
+
+  do {
+    if (pheap->occupied) {
+      struct pheap_entry_occupied *occupied = (struct pheap_entry_occupied *)pheap;
+      if (occupied->lno == lno)
+        return occupied;
+    }
+
+    pheap = (struct pheap_entry *)((uint8_t *)pheap + sizeof(struct pheap_entry) + pheap->length);
+  } while (!pheap->last);
+
+  return NULL;
+}
+
+struct pheap_entry *find_gap(uint16_t sz) {
+  struct pheap_entry *pheap = (struct pheap_entry *)PHEAP;
+
+  while (1) {
+    if (!pheap->occupied && pheap->length >= sz)
+      return pheap;
+    if (pheap->last)
+      break;
+    pheap = (struct pheap_entry *)((uint8_t *)pheap + sizeof(struct pheap_entry) + pheap->length);
+  };
+
+  return NULL;
+}
+
 void add_line(uint16_t lno, char const *line, char *err) {
-  size_t o = 0;
-
-  // TODO:
-  //
-  // - [ ] Bad implementation (purely additive)
-  // - [ ] Linked list implementation (store next/prev ptrs)
-
-  // (uint16_t) line number
-  // (uint8_t)  line length
-  // (uint8_t*) line length * bytes
-
   if (!lno) {
     strcpy_P(err, LINE_NO_REQ_ERR);
     return;
@@ -37,13 +84,38 @@ void add_line(uint16_t lno, char const *line, char *err) {
     return;
   }
 
-  while (o + 3 + len < sizeof(PHEAP)) {
-    if (*(uint16_t *)&PHEAP[o] == 0)
-      break;
-    o += 3 + PHEAP[o + 2];
-  }
+  struct pheap_entry_occupied *extant = find_line(lno);
 
-  if (o + 3 + len >= sizeof(PHEAP)) {
+  struct pheap_entry_occupied *target;
+
+  //dump_heap("add_line start");
+
+  if (!extant) {
+    struct pheap_entry *gap =
+      find_gap(sizeof(struct pheap_entry_occupied) - sizeof(struct pheap_entry) + len);
+
+    if (!gap) {
+      strcpy_P(err, PHEAP_OVERRUN_ERR);
+      return;
+    }
+
+    // can we subdivide this gap?
+    if (gap->length - sizeof(struct pheap_entry_occupied) + sizeof(struct pheap_entry) > sizeof(struct pheap_entry_occupied)) {
+      // we can fit at least a 1 character string in
+      
+      struct pheap_entry *ne = (struct pheap_entry *)((uint8_t *)gap + sizeof(struct pheap_entry_occupied) + len);
+      ne->occupied = 0;
+      ne->length = gap->length - sizeof(struct pheap_entry_occupied) + sizeof(struct pheap_entry) - len;
+      ne->last = gap->last;
+      gap->last = 0;
+      gap->length = sizeof(struct pheap_entry_occupied) - sizeof(struct pheap_entry) + len;
+      // dump_heap("subdivided");
+    }
+
+    target = (struct pheap_entry_occupied *)gap;
+    target->entry.occupied = 1;
+  } else {
+    // TODO
     strcpy_P(err, PHEAP_OVERRUN_ERR);
     return;
   }
@@ -54,26 +126,16 @@ void add_line(uint16_t lno, char const *line, char *err) {
   if (!MAX_LINE || lno > MAX_LINE)
     MAX_LINE = lno;
 
-  *(uint16_t *)&PHEAP[o] = lno;
-  PHEAP[o + 2] = len;
-  memcpy(&PHEAP[o + 3], line, len);
+  target->lno = lno;
+  target->llen = len;
+  memcpy(target + 1, line, len);
 }
 
 int get_line(uint16_t lno, char line[MAX_LINE_LEN], char *err) {
-  size_t o = 0, p = -1;
-
-  while (o + 3 < sizeof(PHEAP)) {
-    if (*(uint16_t *)&PHEAP[o] == lno)
-      p = o;
-    if (*(uint16_t *)&PHEAP[o] == 0)
-      break;
-    o += 3 + PHEAP[o + 2];
-  }
-
-  if (p == -1)
+  struct pheap_entry_occupied *e = find_line(lno);
+  if (!e)
     return 0;
 
-  int len = PHEAP[p + 2];
-  memcpy(line, &PHEAP[p + 3], len);
-  return len;
+  memcpy(line, e + 1, e->llen);
+  return e->llen;
 }
