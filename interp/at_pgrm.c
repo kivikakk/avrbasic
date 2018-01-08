@@ -42,7 +42,6 @@ struct pheap_entry_occupied *find_line(uint16_t lno) {
   if (!MIN_LINE || lno < MIN_LINE || lno > MAX_LINE)
     return NULL;
 
-  // search for existing line
   struct pheap_entry *pheap = (struct pheap_entry *)PHEAP;
 
   do {
@@ -84,11 +83,8 @@ void add_line(uint16_t lno, char const *line, char *err) {
     return;
   }
 
-  struct pheap_entry_occupied *extant = find_line(lno);
-
-  struct pheap_entry_occupied *target;
-
-  //dump_heap("add_line start");
+  struct pheap_entry_occupied *extant = find_line(lno),
+    *target;
 
   if (!extant) {
     struct pheap_entry *gap =
@@ -102,22 +98,26 @@ void add_line(uint16_t lno, char const *line, char *err) {
     // can we subdivide this gap?
     if (gap->length - sizeof(struct pheap_entry_occupied) + sizeof(struct pheap_entry) > sizeof(struct pheap_entry_occupied)) {
       // we can fit at least a 1 character string in
-      
       struct pheap_entry *ne = (struct pheap_entry *)((uint8_t *)gap + sizeof(struct pheap_entry_occupied) + len);
       ne->occupied = 0;
       ne->length = gap->length - sizeof(struct pheap_entry_occupied) + sizeof(struct pheap_entry) - len;
       ne->last = gap->last;
       gap->last = 0;
       gap->length = sizeof(struct pheap_entry_occupied) - sizeof(struct pheap_entry) + len;
-      // dump_heap("subdivided");
     }
 
     target = (struct pheap_entry_occupied *)gap;
     target->entry.occupied = 1;
   } else {
-    // TODO
-    strcpy_P(err, PHEAP_OVERRUN_ERR);
-    return;
+    // can we fit in here?
+    if (extant->entry.length - sizeof(struct pheap_entry_occupied) + sizeof(struct pheap_entry) >= len) {
+      // yes.
+      target = extant;
+    } else {
+      // no.
+      strcpy_P(err, PHEAP_OVERRUN_ERR);
+      return;
+    }
   }
 
   if (!MIN_LINE || lno < MIN_LINE)
