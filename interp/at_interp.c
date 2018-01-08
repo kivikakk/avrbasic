@@ -224,7 +224,7 @@ enum if_status {
   PRE,
   MID,
   POST,
-} IF_STATUS;
+} IF_STATUS[5] = {OUT, OUT, OUT, OUT, OUT};
 
 void exec_stmt(char const *stmt, char *err) {
   t = stmt;
