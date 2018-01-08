@@ -98,7 +98,9 @@ size_t tokenize(char const **input, char const **out, enum token_type *token_typ
     } else if (*input - *out == 4 && strncmp(*out, "LIST", 4) == 0) {
       *token_type_out = T_S_LIST;
     } else if (*input - *out == 3 && strncmp(*out, "RUN", 3) == 0) {
-        *token_type_out = T_S_RUN;
+      *token_type_out = T_S_RUN;
+    } else if (*input - *out == 4 && strncmp(*out, "GOTO", 4) == 0) {
+      *token_type_out = T_S_GOTO;
     }
   }
 
@@ -120,6 +122,7 @@ char const N_T_S_ELSEIF[] PROGMEM = "T_S_ELSEIF";
 char const N_T_S_END[] PROGMEM = "T_S_END";
 char const N_T_S_LIST[] PROGMEM = "T_S_LIST";
 char const N_T_S_RUN[] PROGMEM = "T_S_RUN";
+char const N_T_S_GOTO[] PROGMEM = "T_S_GOTO";
 char const N_T_NUMBER[] PROGMEM = "T_NUMBER";
 char const N_T_LABEL[] PROGMEM = "T_LABEL";
 char const N_T_ADD[] PROGMEM = "T_ADD";
@@ -146,6 +149,7 @@ static PGM_P tts(enum token_type tt) {
   case T_S_END: return N_T_S_END;
   case T_S_LIST: return N_T_S_LIST;
   case T_S_RUN: return N_T_S_RUN;
+  case T_S_GOTO: return N_T_S_GOTO;
   case T_NUMBER: return N_T_NUMBER;
   case T_LABEL: return N_T_LABEL;
   case T_ADD: return N_T_ADD;
@@ -204,6 +208,7 @@ static void exec_stmt_input(char *err);
 static void exec_stmt_lno(char *err);
 static void exec_stmt_list(char *err);
 static void exec_stmt_run(char *err);
+static void exec_stmt_goto(char *err);
 
 void exec_stmt(char const *stmt, char *err) {
   t = stmt;
@@ -238,6 +243,11 @@ void exec_stmt(char const *stmt, char *err) {
 
   if (accept(T_S_RUN)) {
     exec_stmt_run(err);
+    return;
+  }
+
+  if (accept(T_S_GOTO)) {
+    exec_stmt_goto(err);
     return;
   }
 
@@ -382,11 +392,13 @@ static void exec_stmt_list(char *err) {
   }
 }
 
+static uint16_t run_lno;
+
 static void exec_stmt_run(char *err) {
   char line[MAX_LINE_LEN + 1];
 
-  for (uint16_t lno = MIN_LINE; lno <= MAX_LINE; ++lno) {
-    int len = get_line(lno, line, err);
+  for (run_lno = MIN_LINE; run_lno <= MAX_LINE; ++run_lno) {
+    int len = get_line(run_lno, line, err);
     if (*err)
       return;
     if (!len)
@@ -396,12 +408,21 @@ static void exec_stmt_run(char *err) {
     exec_stmt(line, err);
     if (*err) {
       putstr("ERR: at line ");
-      snprintf(line, sizeof(line), "%d", lno);
+      snprintf(line, sizeof(line), "%d", run_lno);
       putstr(line);
+      putstr("\n");
+      putstr(err);
       putstr("\n");
       return;
     }
   }
+}
+
+static void exec_stmt_goto(char *err) {
+  if (!expect(T_NUMBER, err))
+    return;
+
+  run_lno = atoi(accept_out) - 1;
 }
 
 enum binop {

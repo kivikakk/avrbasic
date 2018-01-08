@@ -25,7 +25,7 @@ int getln(char line[GETLN_LEN]) {
   }
   if (r > GETLN_LEN)
     r = GETLN_LEN;
-  if (r && l [r - 1] == '\n')
+  if (r && l[r - 1] == '\n')
     --r;
   memcpy(line, l, r);
   for (size_t i = 0; i < r; ++i)
@@ -38,8 +38,48 @@ void flush(void) {}
 
 int main(int argc, char **argv) {
   char line[GETLN_LEN + 1];
-  printf("AVR-BASIC\n");
   init_pheap();
+
+  if (argc > 1) {
+    FILE *f = fopen(argv[1], "r");
+    ssize_t r;
+    char *buf = NULL;
+    size_t buf_sz = 0;
+    char err[ERR_LEN];
+
+
+    while ((r = getline(&buf, &buf_sz, f))) {
+      if (r < 1)
+        break;
+      if (r > GETLN_LEN)
+        r = GETLN_LEN;
+      if (buf[r - 1] == '\n')
+        --r;
+      memcpy(line, buf, r);
+      for (size_t i = 0; i < r; ++i)
+        line[i] = toupper(line[i]);
+
+      *err = 0;
+      exec_stmt(line, err);
+      if (*err) {
+        putstr("ERR: ");
+        putstr(err);
+        putstr("\n");
+        fclose(f);
+        free(buf);
+        return 1;
+      }
+    }
+
+    fclose(f);
+    free(buf);
+
+    exec_stmt("RUN", err);
+
+    return 0;
+  }
+
+  printf("AVR-BASIC\n");
 
   while (1) {
     putstr(">");
