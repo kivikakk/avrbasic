@@ -330,6 +330,20 @@ void test_list(test_batch_runner *runner) {
   STR_EQ(runner, STDOUT_BUF, "10 PRINT 42\n20 GOTO 10\n", "test_list");
 }
 
+void test_goto(test_batch_runner *runner) {
+  STDOUT_BUF[0] = 0;
+  exec(runner,
+       "10 GOTO 30\n"
+       "20 PRINT 1\n"
+       "30 PRINT 2\n"
+       "40 GOTO 70\n"
+       "50 PRINT 3\n"
+       "60 GOTO 100\n"
+       "70 GOTO 50\n"
+       "RUN\n");
+  STR_EQ(runner, STDOUT_BUF, "2\n3\n", "test_goto");
+}
+
 int main() {
   init_pheap();
 
@@ -344,6 +358,7 @@ int main() {
   test_exec_stmt_input(runner);
   test_pheap(runner);
   test_list(runner);
+  test_goto(runner);
 
   test_print_summary(runner);
   int retval = test_ok(runner) ? 0 : 1;
