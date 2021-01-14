@@ -11,7 +11,7 @@ Parts list:
 
 * ATmega328p
 * ST7920, headers, lots of pin–plug header cables
-* the keyboard in [`/keyboard`](/keyboard), or anything else that uses UART
+* the keyboard in [`/keyboard`](../tree/keyboard), or anything else that uses UART
 * Whatever you use to program and power your AVR
 
 Language description:
