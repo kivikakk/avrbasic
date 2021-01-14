@@ -5,6 +5,8 @@ Re-live your TRS-80 memories with your ATmega. Maybe.
 
 ![image of it running](running.jpg)
 
+![image of it running more](running2.jpg)
+
 I'll do a hardware diagram and stuff like that soon.
 
 Parts list:
